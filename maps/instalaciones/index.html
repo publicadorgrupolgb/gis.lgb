@@ -21,11 +21,34 @@
             padding: 0;
             margin: 0;
         }
-        </style>
+
+/* BOTÓN FLOTANTE */
+.btn-volver {
+    position: absolute;
+    top: 10px;
+    left: 50px;
+    z-index: 1000;
+    background: #007BFF;
+    color: white;
+    padding: 8px 12px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+}
+
+.btn-volver:hover {
+    background: #0056b3;
+}
+			
+		</style>
         <title>Instalaciones</title>
     </head>
     <body>
-        <div id="map">
+
+		            <!-- BOTÓN VOLVER -->
+    <a href="../../index.html" class="btn-volver">⬅ Volver al inicio</a>
+		
+		<div id="map">
         </div>
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
