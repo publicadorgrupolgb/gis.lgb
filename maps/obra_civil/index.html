@@ -1,0 +1,1978 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title>Obra Civil</title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/ObraCivil_2.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[13.666405211627488,-92.48062758993854],[17.756365211639547,-86.4758226808299]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        var title = new L.Control({'position':'topright'});
+        title.onAdd = function (map) {
+            this._div = L.DomUtil.create('div', 'info');
+            this.update();
+            return this._div;
+        };
+        title.update = function () {
+            this._div.innerHTML = '<h2>Obra Civil</h2>';
+        };
+        title.addTo(map);
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_WorldImagery_0');
+        map.getPane('pane_WorldImagery_0').style.zIndex = 400;
+        var layer_WorldImagery_0 = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            pane: 'pane_WorldImagery_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+        });
+        layer_WorldImagery_0;
+        map.addLayer(layer_WorldImagery_0);
+        map.createPane('pane_OpenStreetMap_1');
+        map.getPane('pane_OpenStreetMap_1').style.zIndex = 401;
+        var layer_OpenStreetMap_1 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OpenStreetMap_1',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+        });
+        layer_OpenStreetMap_1;
+        map.addLayer(layer_OpenStreetMap_1);
+        function pop_ObraCivil_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">SUBPROYECT</th>\
+                        <td class="visible-with-data" id="SUBPROYECT">' + (feature.properties['SUBPROYECT'] !== null ? autolinker.link(String(feature.properties['SUBPROYECT']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ID_CLARO</th>\
+                        <td class="visible-with-data" id="ID_CLARO">' + (feature.properties['ID_CLARO'] !== null ? autolinker.link(String(feature.properties['ID_CLARO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Estatus_de</th>\
+                        <td class="visible-with-data" id="Estatus_de">' + (feature.properties['Estatus_de'] !== null ? autolinker.link(String(feature.properties['Estatus_de']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">SITIO</th>\
+                        <td class="visible-with-data" id="SITIO">' + (feature.properties['SITIO'] !== null ? autolinker.link(String(feature.properties['SITIO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">DEPARTAMEN</th>\
+                        <td class="visible-with-data" id="DEPARTAMEN">' + (feature.properties['DEPARTAMEN'] !== null ? autolinker.link(String(feature.properties['DEPARTAMEN']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">MUNICIPIO</th>\
+                        <td class="visible-with-data" id="MUNICIPIO">' + (feature.properties['MUNICIPIO'] !== null ? autolinker.link(String(feature.properties['MUNICIPIO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">PROYECTO</th>\
+                        <td class="visible-with-data" id="PROYECTO">' + (feature.properties['PROYECTO'] !== null ? autolinker.link(String(feature.properties['PROYECTO']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">TRABAJOS_D</th>\
+                        <td class="visible-with-data" id="TRABAJOS_D">' + (feature.properties['TRABAJOS_D'] !== null ? autolinker.link(String(feature.properties['TRABAJOS_D']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">PLAN__W_</th>\
+                        <td class="visible-with-data" id="PLAN__W_">' + (feature.properties['PLAN__W_'] !== null ? autolinker.link(String(feature.properties['PLAN__W_']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">FECHA_ASIG</th>\
+                        <td class="visible-with-data" id="FECHA_ASIG">' + (feature.properties['FECHA_ASIG'] !== null ? autolinker.link(String(feature.properties['FECHA_ASIG']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">FECHA_INIC</th>\
+                        <td class="visible-with-data" id="FECHA_INIC">' + (feature.properties['FECHA_INIC'] !== null ? autolinker.link(String(feature.properties['FECHA_INIC']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">FECHA_FIN</th>\
+                        <td class="visible-with-data" id="FECHA_FIN">' + (feature.properties['FECHA_FIN'] !== null ? autolinker.link(String(feature.properties['FECHA_FIN']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">REVISION</th>\
+                        <td class="visible-with-data" id="REVISION">' + (feature.properties['REVISION'] !== null ? autolinker.link(String(feature.properties['REVISION']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ACEPTACION</th>\
+                        <td class="visible-with-data" id="ACEPTACION">' + (feature.properties['ACEPTACION'] !== null ? autolinker.link(String(feature.properties['ACEPTACION']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Fecha_de_d</th>\
+                        <td class="visible-with-data" id="Fecha_de_d">' + (feature.properties['Fecha_de_d'] !== null ? autolinker.link(String(feature.properties['Fecha_de_d']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_ObraCivil_2_0(feature) {
+            switch(String(feature.properties['Estatus_de'])) {
+                case 'EN PROCESO':
+                    return {
+                pane: 'pane_ObraCivil_2',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,221,0,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'FINALIZADO':
+                    return {
+                pane: 'pane_ObraCivil_2',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(131,238,26,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'NO EJECUTADO':
+                    return {
+                pane: 'pane_ObraCivil_2',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(225,0,0,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'PENDIENTE':
+                    return {
+                pane: 'pane_ObraCivil_2',
+                radius: 6.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(237,178,112,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_ObraCivil_2');
+        map.getPane('pane_ObraCivil_2').style.zIndex = 402;
+        map.getPane('pane_ObraCivil_2').style['mix-blend-mode'] = 'normal';
+        var layer_ObraCivil_2 = new L.geoJson(json_ObraCivil_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_ObraCivil_2',
+            layerName: 'layer_ObraCivil_2',
+            pane: 'pane_ObraCivil_2',
+            onEachFeature: pop_ObraCivil_2,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.circleMarker(latlng, style_ObraCivil_2_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_ObraCivil_2);
+        map.addLayer(layer_ObraCivil_2);
+        const url = {"Nominatim OSM": "https://nominatim.openstreetmap.org/search?format=geojson&addressdetails=1&",
+        "France BAN": "https://api-adresse.data.gouv.fr/search/?"}
+        var photonControl = L.control.photon({
+            url: url["Nominatim OSM"],
+            feedbackLabel: '',
+            position: 'topleft',
+            includePosition: true,
+            initial: true,
+            // resultsHandler: myHandler,
+        }).addTo(map);
+        photonControl._container.childNodes[0].style.borderRadius="10px"
+        // Create a variable to store the geoJSON data
+        var x = null;
+        // Create a variable to store the marker
+        var marker = null;
+        // Add an event listener to the Photon control to create a marker from the returned geoJSON data
+        var z = null;
+        photonControl.on('selected', function(e) {
+            console.log(photonControl.search.resultsContainer);
+            if (x != null) {
+                map.removeLayer(obj3.marker);
+                map.removeLayer(x);
+            }
+            obj2.gcd = e.choice;
+            x = L.geoJSON(obj2.gcd).addTo(map);
+            var label = typeof obj2.gcd.properties.label === 'undefined' ? obj2.gcd.properties.display_name : obj2.gcd.properties.label;
+            obj3.marker = L.marker(x.getLayers()[0].getLatLng()).bindPopup(label).addTo(map);
+            map.setView(x.getLayers()[0].getLatLng(), 17);
+            z = typeof e.choice.properties.label === 'undefined'? e.choice.properties.display_name : e.choice.properties.label;
+            console.log(e);
+            e.target.input.value = z;
+        });
+        var search = document.getElementsByClassName("leaflet-photon leaflet-control")[0];
+        search.classList.add("leaflet-control-search")
+        search.style.display = "flex";
+        search.style.backgroundColor="rgba(255,255,255,0.5)" 
+
+        // Create the new button element
+        var button = document.createElement("div");
+        button.id = "gcd-button-control";
+        button.className = "gcd-gl-btn fa fa-search search-button";
+
+        // Insert the button at the beginning of the search control
+        search.insertBefore(button, search.firstChild);
+        last = search.lastChild;
+        last.style.display = "none";
+        button.addEventListener("click", function (e) {
+            if (last.style.display === "none") {
+                last.style.display = "block";
+            } else {
+                last.style.display = "none";
+            }
+        });
+        var overlaysTree = [
+            {label: 'ObraCivil<br /><table><tr><td style="text-align: center;"><img src="legend/ObraCivil_2_ENPROCESO0.png" /></td><td>EN PROCESO</td></tr><tr><td style="text-align: center;"><img src="legend/ObraCivil_2_FINALIZADO1.png" /></td><td>FINALIZADO</td></tr><tr><td style="text-align: center;"><img src="legend/ObraCivil_2_NOEJECUTADO2.png" /></td><td>NO EJECUTADO</td></tr><tr><td style="text-align: center;"><img src="legend/ObraCivil_2_PENDIENTE3.png" /></td><td>PENDIENTE</td></tr></table>', layer: layer_ObraCivil_2},
+            {label: "Open Street Map", layer: layer_OpenStreetMap_1},
+            {label: "World Imagery", layer: layer_WorldImagery_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        map.addControl(new L.Control.Search({
+            layer: layer_ObraCivil_2,
+            initial: false,
+            hideMarkerOnCollapse: true,
+            propertyName: 'SITIO'}));
+        if (typeof url === 'undefined') {
+            document.getElementsByClassName('search-button')[0].className += ' fa fa-binoculars';
+        } else {
+            document.getElementsByClassName('search-button')[1].className += ' fa fa-binoculars';
+        }
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"Estatus_de": "str","DEPARTAMEN": "str","SITIO": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Estatus_de = document.createElement('div');
+            div_Estatus_de.id = "div_Estatus_de";
+            div_Estatus_de.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Estatus_de);
+            sel_Estatus_de = document.createElement('select');
+            sel_Estatus_de.multiple = true;
+            sel_Estatus_de.size = 4;
+            sel_Estatus_de.id = "sel_Estatus_de";
+            var Estatus_de_options_str = "<option value='' unselected></option>";
+            sel_Estatus_de.onchange = function(){filterFunc()};
+            Estatus_de_options_str  += '<option value="EN PROCESO">EN PROCESO</option>';
+            Estatus_de_options_str  += '<option value="FINALIZADO">FINALIZADO</option>';
+            Estatus_de_options_str  += '<option value="NO EJECUTADO">NO EJECUTADO</option>';
+            Estatus_de_options_str  += '<option value="PENDIENTE">PENDIENTE</option>';
+            sel_Estatus_de.innerHTML = Estatus_de_options_str;
+            div_Estatus_de.appendChild(sel_Estatus_de);
+            var lab_Estatus_de = document.createElement('div');
+            lab_Estatus_de.innerHTML = 'Estatus_de';
+            lab_Estatus_de.className = 'filterlabel';
+            div_Estatus_de.appendChild(lab_Estatus_de);
+            var reset_Estatus_de = document.createElement('div');
+            reset_Estatus_de.innerHTML = 'clear filter';
+            reset_Estatus_de.className = 'filterlabel';
+            reset_Estatus_de.onclick = function() {
+                var options = document.getElementById("sel_Estatus_de").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Estatus_de.appendChild(reset_Estatus_de);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_DEPARTAMEN = document.createElement('div');
+            div_DEPARTAMEN.id = "div_DEPARTAMEN";
+            div_DEPARTAMEN.className= "filterselect";
+            document.getElementById("menu").appendChild(div_DEPARTAMEN);
+            sel_DEPARTAMEN = document.createElement('select');
+            sel_DEPARTAMEN.multiple = true;
+            sel_DEPARTAMEN.size = 10;
+            sel_DEPARTAMEN.id = "sel_DEPARTAMEN";
+            var DEPARTAMEN_options_str = "<option value='' unselected></option>";
+            sel_DEPARTAMEN.onchange = function(){filterFunc()};
+            DEPARTAMEN_options_str  += '<option value="NULL">NULL</option>';
+            DEPARTAMEN_options_str  += '<option value="ALTA VERAPAZ">ALTA VERAPAZ</option>';
+            DEPARTAMEN_options_str  += '<option value="Alta Verapaz">Alta Verapaz</option>';
+            DEPARTAMEN_options_str  += '<option value="BAJA VERAPAZ">BAJA VERAPAZ</option>';
+            DEPARTAMEN_options_str  += '<option value="Baja Verapaz">Baja Verapaz</option>';
+            DEPARTAMEN_options_str  += '<option value="CHIMALTENANGO">CHIMALTENANGO</option>';
+            DEPARTAMEN_options_str  += '<option value="CHIQUIMULA">CHIQUIMULA</option>';
+            DEPARTAMEN_options_str  += '<option value="Chimaltenango">Chimaltenango</option>';
+            DEPARTAMEN_options_str  += '<option value="Chiquimula">Chiquimula</option>';
+            DEPARTAMEN_options_str  += '<option value="Chiquimula	">Chiquimula	</option>';
+            DEPARTAMEN_options_str  += '<option value="EL PROGRESO">EL PROGRESO</option>';
+            DEPARTAMEN_options_str  += '<option value="EL QUICH�">EL QUICH�</option>';
+            DEPARTAMEN_options_str  += '<option value="ESCUINTLA">ESCUINTLA</option>';
+            DEPARTAMEN_options_str  += '<option value="El Progreso">El Progreso</option>';
+            DEPARTAMEN_options_str  += '<option value="Escuintla">Escuintla</option>';
+            DEPARTAMEN_options_str  += '<option value="GUATEMALA">GUATEMALA</option>';
+            DEPARTAMEN_options_str  += '<option value="Guatemala">Guatemala</option>';
+            DEPARTAMEN_options_str  += '<option value="HUEHUETENANGO">HUEHUETENANGO</option>';
+            DEPARTAMEN_options_str  += '<option value="Huehuetenango">Huehuetenango</option>';
+            DEPARTAMEN_options_str  += '<option value="IZABAL">IZABAL</option>';
+            DEPARTAMEN_options_str  += '<option value="Izabal">Izabal</option>';
+            DEPARTAMEN_options_str  += '<option value="JALAPA">JALAPA</option>';
+            DEPARTAMEN_options_str  += '<option value="JUTIAPA">JUTIAPA</option>';
+            DEPARTAMEN_options_str  += '<option value="Jalapa">Jalapa</option>';
+            DEPARTAMEN_options_str  += '<option value="Jutiapa">Jutiapa</option>';
+            DEPARTAMEN_options_str  += '<option value="PETEN">PETEN</option>';
+            DEPARTAMEN_options_str  += '<option value="PETÉ">PETÉ</option>';
+            DEPARTAMEN_options_str  += '<option value="Peten">Peten</option>';
+            DEPARTAMEN_options_str  += '<option value="Peté">Peté</option>';
+            DEPARTAMEN_options_str  += '<option value="QUETZALTENANGO">QUETZALTENANGO</option>';
+            DEPARTAMEN_options_str  += '<option value="QUICHE">QUICHE</option>';
+            DEPARTAMEN_options_str  += '<option value="QUICH�">QUICH�</option>';
+            DEPARTAMEN_options_str  += '<option value="Quetzaltenango">Quetzaltenango</option>';
+            DEPARTAMEN_options_str  += '<option value="Quiche">Quiche</option>';
+            DEPARTAMEN_options_str  += '<option value="Quich�">Quich�</option>';
+            DEPARTAMEN_options_str  += '<option value="RETALHULEU">RETALHULEU</option>';
+            DEPARTAMEN_options_str  += '<option value="Retalhuleu">Retalhuleu</option>';
+            DEPARTAMEN_options_str  += '<option value="SACATEPEQUEZ">SACATEPEQUEZ</option>';
+            DEPARTAMEN_options_str  += '<option value="SACATEPÉQUE">SACATEPÉQUE</option>';
+            DEPARTAMEN_options_str  += '<option value="SAN MARCOS">SAN MARCOS</option>';
+            DEPARTAMEN_options_str  += '<option value="SANTA ROSA">SANTA ROSA</option>';
+            DEPARTAMEN_options_str  += '<option value="SOLOLA">SOLOLA</option>';
+            DEPARTAMEN_options_str  += '<option value="SOLOL�">SOLOL�</option>';
+            DEPARTAMEN_options_str  += '<option value="SUCHITEPEQUEZ">SUCHITEPEQUEZ</option>';
+            DEPARTAMEN_options_str  += '<option value="SUCHITEPÉQUE">SUCHITEPÉQUE</option>';
+            DEPARTAMEN_options_str  += '<option value="Sacatepequez">Sacatepequez</option>';
+            DEPARTAMEN_options_str  += '<option value="Sacatepéque">Sacatepéque</option>';
+            DEPARTAMEN_options_str  += '<option value="San Marcos">San Marcos</option>';
+            DEPARTAMEN_options_str  += '<option value="Santa Rosa">Santa Rosa</option>';
+            DEPARTAMEN_options_str  += '<option value="Solola">Solola</option>';
+            DEPARTAMEN_options_str  += '<option value="Solol�">Solol�</option>';
+            DEPARTAMEN_options_str  += '<option value="Suchitepequez">Suchitepequez</option>';
+            DEPARTAMEN_options_str  += '<option value="Suchitepéque">Suchitepéque</option>';
+            DEPARTAMEN_options_str  += '<option value="TOTONICAPAN">TOTONICAPAN</option>';
+            DEPARTAMEN_options_str  += '<option value="Totonicapan">Totonicapan</option>';
+            DEPARTAMEN_options_str  += '<option value="Totonicapá">Totonicapá</option>';
+            DEPARTAMEN_options_str  += '<option value="ZACAPA">ZACAPA</option>';
+            DEPARTAMEN_options_str  += '<option value="Zacapa">Zacapa</option>';
+            sel_DEPARTAMEN.innerHTML = DEPARTAMEN_options_str;
+            div_DEPARTAMEN.appendChild(sel_DEPARTAMEN);
+            var lab_DEPARTAMEN = document.createElement('div');
+            lab_DEPARTAMEN.innerHTML = 'DEPARTAMEN';
+            lab_DEPARTAMEN.className = 'filterlabel';
+            div_DEPARTAMEN.appendChild(lab_DEPARTAMEN);
+            var reset_DEPARTAMEN = document.createElement('div');
+            reset_DEPARTAMEN.innerHTML = 'clear filter';
+            reset_DEPARTAMEN.className = 'filterlabel';
+            reset_DEPARTAMEN.onclick = function() {
+                var options = document.getElementById("sel_DEPARTAMEN").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_DEPARTAMEN.appendChild(reset_DEPARTAMEN);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_SITIO = document.createElement('div');
+            div_SITIO.id = "div_SITIO";
+            div_SITIO.className= "filterselect";
+            document.getElementById("menu").appendChild(div_SITIO);
+            sel_SITIO = document.createElement('select');
+            sel_SITIO.multiple = true;
+            sel_SITIO.size = 10;
+            sel_SITIO.id = "sel_SITIO";
+            var SITIO_options_str = "<option value='' unselected></option>";
+            sel_SITIO.onchange = function(){filterFunc()};
+            SITIO_options_str  += '<option value="NULL">NULL</option>';
+            SITIO_options_str  += '<option value="1 AVENIDA BOCA DEL MONTE_XT_TR">1 AVENIDA BOCA DEL MONTE_XT_TR</option>';
+            SITIO_options_str  += '<option value="11 AVENIDA ZONA 1 CHIQUIMULA_XT_SBA">11 AVENIDA ZONA 1 CHIQUIMULA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="14 CALLE Y 12 AVENIDA ZONA 1_XT_TR">14 CALLE Y 12 AVENIDA ZONA 1_XT_TR</option>';
+            SITIO_options_str  += '<option value="20 AGOSTO MALACATAN TC">20 AGOSTO MALACATAN TC</option>';
+            SITIO_options_str  += '<option value="20 DE OCTUBRE CHAMPERICO EXP">20 DE OCTUBRE CHAMPERICO EXP</option>';
+            SITIO_options_str  += '<option value="3GOSanMarcos2_(3384)">3GOSanMarcos2_(3384)</option>';
+            SITIO_options_str  += '<option value="3GOTeleman_II_C_(5252)">3GOTeleman_II_C_(5252)</option>';
+            SITIO_options_str  += '<option value="3GOTucuru_C_(5251)">3GOTucuru_C_(5251)</option>';
+            SITIO_options_str  += '<option value="4 AVENIDA SANTA LUCIA COTZUMALGUAPA_XT">4 AVENIDA SANTA LUCIA COTZUMALGUAPA_XT</option>';
+            SITIO_options_str  += '<option value="46 CALLE ZONA 12_XT_TR">46 CALLE ZONA 12_XT_TR</option>';
+            SITIO_options_str  += '<option value="4GO_Agua_Escondida_Palopo(2884)">4GO_Agua_Escondida_Palopo(2884)</option>';
+            SITIO_options_str  += '<option value="4GO_Agua_Sembrada(2702)">4GO_Agua_Sembrada(2702)</option>';
+            SITIO_options_str  += '<option value="4GO_Aldea_Chaquial(2731)">4GO_Aldea_Chaquial(2731)</option>';
+            SITIO_options_str  += '<option value="4GO_Aldea_Pocitos_TC(4135)">4GO_Aldea_Pocitos_TC(4135)</option>';
+            SITIO_options_str  += '<option value="4GO_Aldea_Santa_Adelaida(1650)">4GO_Aldea_Santa_Adelaida(1650)</option>';
+            SITIO_options_str  += '<option value="4GO_Boqueron_De_Majadas(2703)">4GO_Boqueron_De_Majadas(2703)</option>';
+            SITIO_options_str  += '<option value="4GO_Buenos_Aires_Huista(2650)">4GO_Buenos_Aires_Huista(2650)</option>';
+            SITIO_options_str  += '<option value="4GO_Cabastic(2734)">4GO_Cabastic(2734)</option>';
+            SITIO_options_str  += '<option value="4GO_Calapte(4612)">4GO_Calapte(4612)</option>';
+            SITIO_options_str  += '<option value="4GO_Camojaito_2(2618)">4GO_Camojaito_2(2618)</option>';
+            SITIO_options_str  += '<option value="4GO_Canatzaj(4776)">4GO_Canatzaj(4776)</option>';
+            SITIO_options_str  += '<option value="4GO_Canton_Tosaquim_(4778)">4GO_Canton_Tosaquim_(4778)</option>';
+            SITIO_options_str  += '<option value="4GO_Centro_1(2708)">4GO_Centro_1(2708)</option>';
+            SITIO_options_str  += '<option value="4GO_Cerro_Pacha(4643)">4GO_Cerro_Pacha(4643)</option>';
+            SITIO_options_str  += '<option value="4GO_Chacaj_Menton(2628)">4GO_Chacaj_Menton(2628)</option>';
+            SITIO_options_str  += '<option value="4GO_Chapala_Cuilco(2614)">4GO_Chapala_Cuilco(2614)</option>';
+            SITIO_options_str  += '<option value="4GO_Chuicaca(2769)">4GO_Chuicaca(2769)</option>';
+            SITIO_options_str  += '<option value="4GO_Coban_7(1669)">4GO_Coban_7(1669)</option>';
+            SITIO_options_str  += '<option value="4GO_Eco_Palmera(4652)">4GO_Eco_Palmera(4652)</option>';
+            SITIO_options_str  += '<option value="4GO_El_Cable(4007)">4GO_El_Cable(4007)</option>';
+            SITIO_options_str  += '<option value="4GO_El_Sabino_TC(4174)">4GO_El_Sabino_TC(4174)</option>';
+            SITIO_options_str  += '<option value="4GO_El_Salamo(3066)">4GO_El_Salamo(3066)</option>';
+            SITIO_options_str  += '<option value="4GO_Eschimal(2715)">4GO_Eschimal(2715)</option>';
+            SITIO_options_str  += '<option value="4GO_Finca_El_Chaguiton(3067)">4GO_Finca_El_Chaguiton(3067)</option>';
+            SITIO_options_str  += '<option value="4GO_Finca_Quiachicho(2619)">4GO_Finca_Quiachicho(2619)</option>';
+            SITIO_options_str  += '<option value="4GO_Fuente_De_La_Montana(3943)">4GO_Fuente_De_La_Montana(3943)</option>';
+            SITIO_options_str  += '<option value="4GO_Ganaderia_Santa_Lucrecia(2876)">4GO_Ganaderia_Santa_Lucrecia(2876)</option>';
+            SITIO_options_str  += '<option value="4GO_Guaxacana_Pueblo(2850)">4GO_Guaxacana_Pueblo(2850)</option>';
+            SITIO_options_str  += '<option value="4GO_Horno_De_Cal(2792)">4GO_Horno_De_Cal(2792)</option>';
+            SITIO_options_str  += '<option value="4GO_Icob_Acatan(2641)">4GO_Icob_Acatan(2641)</option>';
+            SITIO_options_str  += '<option value="4GO_Ixchoch(2717)">4GO_Ixchoch(2717)</option>';
+            SITIO_options_str  += '<option value="4GO_Ixlu(1859)">4GO_Ixlu(1859)</option>';
+            SITIO_options_str  += '<option value="4GO_Ixtinajap(2719)">4GO_Ixtinajap(2719)</option>';
+            SITIO_options_str  += '<option value="4GO_Jardin_De_Fatima(2696)">4GO_Jardin_De_Fatima(2696)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Barrita(2766)">4GO_La_Barrita(2766)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Campana_Jalapa(3859)">4GO_La_Campana_Jalapa(3859)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Fraternidad_San_Francisco(4680)">4GO_La_Fraternidad_San_Francisco(4680)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Guardia(4777)">4GO_La_Guardia(4777)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Rancheria_TC(4140)">4GO_La_Rancheria_TC(4140)</option>';
+            SITIO_options_str  += '<option value="4GO_La_Reinita_Peten(3101)">4GO_La_Reinita_Peten(3101)</option>';
+            SITIO_options_str  += '<option value="4GO_Las_Brisas_Sibilia(4690)">4GO_Las_Brisas_Sibilia(4690)</option>';
+            SITIO_options_str  += '<option value="4GO_Las_Palmas_Sacatepequez(2757)">4GO_Las_Palmas_Sacatepequez(2757)</option>';
+            SITIO_options_str  += '<option value="4GO_Las_Pilas_Catarina(4791)">4GO_Las_Pilas_Catarina(4791)</option>';
+            SITIO_options_str  += '<option value="4GO_Loma_Linda_Tacana(4696)">4GO_Loma_Linda_Tacana(4696)</option>';
+            SITIO_options_str  += '<option value="4GO_Los_Lavaderos(3123)">4GO_Los_Lavaderos(3123)</option>';
+            SITIO_options_str  += '<option value="4GO_Michicoy(4018)">4GO_Michicoy(4018)</option>';
+            SITIO_options_str  += '<option value="4GO_Muxna(2653)">4GO_Muxna(2653)</option>';
+            SITIO_options_str  += '<option value="4GO_Niya_Santiago(2655)">4GO_Niya_Santiago(2655)</option>';
+            SITIO_options_str  += '<option value="4GO_Norte_De_Nica(4715)">4GO_Norte_De_Nica(4715)</option>';
+            SITIO_options_str  += '<option value="4GO_Nueva_Concepcion_La_Libertad(2651)">4GO_Nueva_Concepcion_La_Libertad(2651)</option>';
+            SITIO_options_str  += '<option value="4GO_Nuevo_San_Mateo_Menton(2632)">4GO_Nuevo_San_Mateo_Menton(2632)</option>';
+            SITIO_options_str  += '<option value="4GO_Panajachel_4(4093)">4GO_Panajachel_4(4093)</option>';
+            SITIO_options_str  += '<option value="4GO_Panquiac(4725)">4GO_Panquiac(4725)</option>';
+            SITIO_options_str  += '<option value="4GO_Penia_Roja(2724)">4GO_Penia_Roja(2724)</option>';
+            SITIO_options_str  += '<option value="4GO_Pueblo_Nuevo_Usumatlan(1876)">4GO_Pueblo_Nuevo_Usumatlan(1876)</option>';
+            SITIO_options_str  += '<option value="4GO_Purucila(3152)">4GO_Purucila(3152)</option>';
+            SITIO_options_str  += '<option value="4GO_Rancho_Viejo_Huista(2636)">4GO_Rancho_Viejo_Huista(2636)</option>';
+            SITIO_options_str  += '<option value="4GO_Sajquim(4079)">4GO_Sajquim(4079)</option>';
+            SITIO_options_str  += '<option value="4GO_Samococh(1775)">4GO_Samococh(1775)</option>';
+            SITIO_options_str  += '<option value="4GO_San_Carlos_Sija_2(3966)">4GO_San_Carlos_Sija_2(3966)</option>';
+            SITIO_options_str  += '<option value="4GO_San_Francisco_El_Quetzal(4738)">4GO_San_Francisco_El_Quetzal(4738)</option>';
+            SITIO_options_str  += '<option value="4GO_San_Francisco_Nueva_Reforma(2882)">4GO_San_Francisco_Nueva_Reforma(2882)</option>';
+            SITIO_options_str  += '<option value="4GO_San_Isidro_Sevetina(4782)">4GO_San_Isidro_Sevetina(4782)</option>';
+            SITIO_options_str  += '<option value="4GO_Santa_Avelina(2862)">4GO_Santa_Avelina(2862)</option>';
+            SITIO_options_str  += '<option value="4GO_Semuy(1540)">4GO_Semuy(1540)</option>';
+            SITIO_options_str  += '<option value="4GO_Sisiltepeque(2573)">4GO_Sisiltepeque(2573)</option>';
+            SITIO_options_str  += '<option value="4GO_Tablon_Del_Ocotal(1803)">4GO_Tablon_Del_Ocotal(1803)</option>';
+            SITIO_options_str  += '<option value="4GO_Tierra_Linda_TC(4901)">4GO_Tierra_Linda_TC(4901)</option>';
+            SITIO_options_str  += '<option value="4GO_Tocache(4793)">4GO_Tocache(4793)</option>';
+            SITIO_options_str  += '<option value="4GO_Ulna(4830)">4GO_Ulna(4830)</option>';
+            SITIO_options_str  += '<option value="4GO_Villa_Laura_Huehuetenango(2623)">4GO_Villa_Laura_Huehuetenango(2623)</option>';
+            SITIO_options_str  += '<option value="4GO_Xetena(4775)">4GO_Xetena(4775)</option>';
+            SITIO_options_str  += '<option value="5 AVENIDA ZONA 1_XT_TR">5 AVENIDA ZONA 1_XT_TR</option>';
+            SITIO_options_str  += '<option value="7A AVENIDA Y 2DA CALLE Z1">7A AVENIDA Y 2DA CALLE Z1</option>';
+            SITIO_options_str  += '<option value="ACACIAS EEGSA XT EGG">ACACIAS EEGSA XT EGG</option>';
+            SITIO_options_str  += '<option value="ACACIAS EEGSA_XT_EGG">ACACIAS EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="ACATENANGO XT">ACATENANGO XT</option>';
+            SITIO_options_str  += '<option value="ACATENANGO XT 2026">ACATENANGO XT 2026</option>';
+            SITIO_options_str  += '<option value="ACEQUIA">ACEQUIA</option>';
+            SITIO_options_str  += '<option value="ACHIGUATE (COW)_XT_CTCI">ACHIGUATE (COW)_XT_CTCI</option>';
+            SITIO_options_str  += '<option value="ACTELA SAN LUIS TC">ACTELA SAN LUIS TC</option>';
+            SITIO_options_str  += '<option value="AGEXPRONT">AGEXPRONT</option>';
+            SITIO_options_str  += '<option value="AGUA DULCE">AGUA DULCE</option>';
+            SITIO_options_str  += '<option value="AGUA DULCE ZARAGOZA - FFACSA REMOTO">AGUA DULCE ZARAGOZA - FFACSA REMOTO</option>';
+            SITIO_options_str  += '<option value="AGUA ESCONDIDA CERRO">AGUA ESCONDIDA CERRO</option>';
+            SITIO_options_str  += '<option value="AGUA SALOBREGA">AGUA SALOBREGA</option>';
+            SITIO_options_str  += '<option value="AGUACATAN">AGUACATAN</option>';
+            SITIO_options_str  += '<option value="ALAMBRES DECORATIVOS">ALAMBRES DECORATIVOS</option>';
+            SITIO_options_str  += '<option value="ALAMEDA DE SANTA LUCIA ANTIGUA_XT">ALAMEDA DE SANTA LUCIA ANTIGUA_XT</option>';
+            SITIO_options_str  += '<option value="ALAMEDAS DE VILLA FLORES">ALAMEDAS DE VILLA FLORES</option>';
+            SITIO_options_str  += '<option value="ALBAMAR QUETZALTENANGO">ALBAMAR QUETZALTENANGO</option>';
+            SITIO_options_str  += '<option value="ALDEA BETHEL ZACAPA_TC">ALDEA BETHEL ZACAPA_TC</option>';
+            SITIO_options_str  += '<option value="ALDEA BOLIVAR">ALDEA BOLIVAR</option>';
+            SITIO_options_str  += '<option value="ALDEA CERRO ALTO EXP">ALDEA CERRO ALTO EXP</option>';
+            SITIO_options_str  += '<option value="ALDEA CHIXOCOL">ALDEA CHIXOCOL</option>';
+            SITIO_options_str  += '<option value="ALDEA CUATRO CAMINOS HUEHUETENANGO">ALDEA CUATRO CAMINOS HUEHUETENANGO</option>';
+            SITIO_options_str  += '<option value="ALDEA EL CACAO BAJA VERAPAZ EXP">ALDEA EL CACAO BAJA VERAPAZ EXP</option>';
+            SITIO_options_str  += '<option value="ALDEA EL CARMEN TC">ALDEA EL CARMEN TC</option>';
+            SITIO_options_str  += '<option value="ALDEA EL CEDRO">ALDEA EL CEDRO</option>';
+            SITIO_options_str  += '<option value="ALDEA EL CHICO REU">ALDEA EL CHICO REU</option>';
+            SITIO_options_str  += '<option value="ALDEA EL CHORRO TC">ALDEA EL CHORRO TC</option>';
+            SITIO_options_str  += '<option value="ALDEA EL DURAZNO CHIMALTENANGO_XT_TR">ALDEA EL DURAZNO CHIMALTENANGO_XT_TR</option>';
+            SITIO_options_str  += '<option value="ALDEA EL LIMON TC">ALDEA EL LIMON TC</option>';
+            SITIO_options_str  += '<option value="ALDEA EL PARAISO PALENCIA">ALDEA EL PARAISO PALENCIA</option>';
+            SITIO_options_str  += '<option value="ALDEA EL ROSARIO XT">ALDEA EL ROSARIO XT</option>';
+            SITIO_options_str  += '<option value="ALDEA EL ROSARIO _XT_2026">ALDEA EL ROSARIO _XT_2026</option>';
+            SITIO_options_str  += '<option value="ALDEA GALVEZ">ALDEA GALVEZ</option>';
+            SITIO_options_str  += '<option value="ALDEA GUISCOYOL TC">ALDEA GUISCOYOL TC</option>';
+            SITIO_options_str  += '<option value="ALDEA IXCAMAL TC">ALDEA IXCAMAL TC</option>';
+            SITIO_options_str  += '<option value="ALDEA JOLOMIJIXITO">ALDEA JOLOMIJIXITO</option>';
+            SITIO_options_str  += '<option value="ALDEA LAS POZAS">ALDEA LAS POZAS</option>';
+            SITIO_options_str  += '<option value="ALDEA LAS ÁNIMAS COATEPEQUE_X">ALDEA LAS ÁNIMAS COATEPEQUE_X</option>';
+            SITIO_options_str  += '<option value="ALDEA LOLITA RETALHULEU">ALDEA LOLITA RETALHULEU</option>';
+            SITIO_options_str  += '<option value="ALDEA LOMA TENDIDA">ALDEA LOMA TENDIDA</option>';
+            SITIO_options_str  += '<option value="ALDEA MADRE VIEJA">ALDEA MADRE VIEJA</option>';
+            SITIO_options_str  += '<option value="ALDEA MIXCO LOS AMATES">ALDEA MIXCO LOS AMATES</option>';
+            SITIO_options_str  += '<option value="ALDEA PACHIPAC TC_XT_TC">ALDEA PACHIPAC TC_XT_TC</option>';
+            SITIO_options_str  += '<option value="ALDEA SAN BERNARDO">ALDEA SAN BERNARDO</option>';
+            SITIO_options_str  += '<option value="ALDEA SAN ISIDRO HUEHUETENANGO_XT">ALDEA SAN ISIDRO HUEHUETENANGO_XT</option>';
+            SITIO_options_str  += '<option value="ALDEA SAN LUIS SAN JUAN TECUACO">ALDEA SAN LUIS SAN JUAN TECUACO</option>';
+            SITIO_options_str  += '<option value="ALDEA SAN NICOLAS ESQUIPULAS TC">ALDEA SAN NICOLAS ESQUIPULAS TC</option>';
+            SITIO_options_str  += '<option value="ALDEA SAN SEBASTIAN TC">ALDEA SAN SEBASTIAN TC</option>';
+            SITIO_options_str  += '<option value="ALDEA SANTA FE">ALDEA SANTA FE</option>';
+            SITIO_options_str  += '<option value="ALDEA SANTIAGUITO EL ESTOR TC">ALDEA SANTIAGUITO EL ESTOR TC</option>';
+            SITIO_options_str  += '<option value="ALDEA SHUSHO ABAJO">ALDEA SHUSHO ABAJO</option>';
+            SITIO_options_str  += '<option value="ALDEA VENECIA TC">ALDEA VENECIA TC</option>';
+            SITIO_options_str  += '<option value="ALDEA XECNUP">ALDEA XECNUP</option>';
+            SITIO_options_str  += '<option value="ALMOLONGA">ALMOLONGA</option>';
+            SITIO_options_str  += '<option value="ALMOLONGA ESCUINTLA_XT_TBS">ALMOLONGA ESCUINTLA_XT_TBS</option>';
+            SITIO_options_str  += '<option value="ALOTENANGO">ALOTENANGO</option>';
+            SITIO_options_str  += '<option value="ALTOS DE BARCENAS POSTE II">ALTOS DE BARCENAS POSTE II</option>';
+            SITIO_options_str  += '<option value="ALTOS DE FUENTES">ALTOS DE FUENTES</option>';
+            SITIO_options_str  += '<option value="AMATITLAN II">AMATITLAN II</option>';
+            SITIO_options_str  += '<option value="AMATITLAN MERCADO EEGSA_XT_EGG">AMATITLAN MERCADO EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="ANTIGUA II_XT_SBA">ANTIGUA II_XT_SBA</option>';
+            SITIO_options_str  += '<option value="APARTAMENTOS 16-16 ZONA 12">APARTAMENTOS 16-16 ZONA 12</option>';
+            SITIO_options_str  += '<option value="ARROCERAVN">ARROCERAVN</option>';
+            SITIO_options_str  += '<option value="ATESCATEMPA">ATESCATEMPA</option>';
+            SITIO_options_str  += '<option value="AURORA 8 TC">AURORA 8 TC</option>';
+            SITIO_options_str  += '<option value="AVENIDA CENTROAMERICA ESCUINTLA_DESMONTAJE">AVENIDA CENTROAMERICA ESCUINTLA_DESMONTAJE</option>';
+            SITIO_options_str  += '<option value="AVENIDA CENTROAMERICA SUR">AVENIDA CENTROAMERICA SUR</option>';
+            SITIO_options_str  += '<option value="AVENIDA DE LA JUSTICIA ZONA 1">AVENIDA DE LA JUSTICIA ZONA 1</option>';
+            SITIO_options_str  += '<option value="AVENIDA DEL CEMENTERIO XT ST">AVENIDA DEL CEMENTERIO XT ST</option>';
+            SITIO_options_str  += '<option value="AVENIDA DON BOSCO">AVENIDA DON BOSCO</option>';
+            SITIO_options_str  += '<option value="AWAKENING REMOTO">AWAKENING REMOTO</option>';
+            SITIO_options_str  += '<option value="Aldea La Cumbre">Aldea La Cumbre</option>';
+            SITIO_options_str  += '<option value="Aldea Malaga">Aldea Malaga</option>';
+            SITIO_options_str  += '<option value="Aldea Paraje Xolve">Aldea Paraje Xolve</option>';
+            SITIO_options_str  += '<option value="Aldea San Marcos">Aldea San Marcos</option>';
+            SITIO_options_str  += '<option value="Aldea Santa Irene">Aldea Santa Irene</option>';
+            SITIO_options_str  += '<option value="Aldea Santa Rosa">Aldea Santa Rosa</option>';
+            SITIO_options_str  += '<option value="Aldea_Yalansiop(4179)">Aldea_Yalansiop(4179)</option>';
+            SITIO_options_str  += '<option value="Asentamiento Señor de Esquipulas Zona 18 X">Asentamiento Señor de Esquipulas Zona 18 X</option>';
+            SITIO_options_str  += '<option value="BACADILLA_XT">BACADILLA_XT</option>';
+            SITIO_options_str  += '<option value="BACAJIA">BACAJIA</option>';
+            SITIO_options_str  += '<option value="BANDEGUA PALO BLANCO">BANDEGUA PALO BLANCO</option>';
+            SITIO_options_str  += '<option value="BARBERENA 2 (SRS225)_XT">BARBERENA 2 (SRS225)_XT</option>';
+            SITIO_options_str  += '<option value="BARRIO GUADALUPE SIPACATE">BARRIO GUADALUPE SIPACATE</option>';
+            SITIO_options_str  += '<option value="BARRIO LAS FLORES GUALAN">BARRIO LAS FLORES GUALAN</option>';
+            SITIO_options_str  += '<option value="BARRIO LAS FLORES GUALAN XT SBA">BARRIO LAS FLORES GUALAN XT SBA</option>';
+            SITIO_options_str  += '<option value="BARRIO SAN MIGUEL CHAMPERICO_XT">BARRIO SAN MIGUEL CHAMPERICO_XT</option>';
+            SITIO_options_str  += '<option value="BARRIO SAN PEDRO SENAHU_XT_TR">BARRIO SAN PEDRO SENAHU_XT_TR</option>';
+            SITIO_options_str  += '<option value="BARRIOS LA VIÑ">BARRIOS LA VIÑ</option>';
+            SITIO_options_str  += '<option value="BARRIOS OLINTEPEQUE">BARRIOS OLINTEPEQUE</option>';
+            SITIO_options_str  += '<option value="BELAJUYAPE TC">BELAJUYAPE TC</option>';
+            SITIO_options_str  += '<option value="BELEN III">BELEN III</option>';
+            SITIO_options_str  += '<option value="BELEN SAN ANTONIO TC">BELEN SAN ANTONIO TC</option>';
+            SITIO_options_str  += '<option value="BELEN SUCHITEPEQUEZ">BELEN SUCHITEPEQUEZ</option>';
+            SITIO_options_str  += '<option value="BELLO HORIZONTE SAN BENITO">BELLO HORIZONTE SAN BENITO</option>';
+            SITIO_options_str  += '<option value="BICHALA COTZAL">BICHALA COTZAL</option>';
+            SITIO_options_str  += '<option value="BICHALA COTZAL TC">BICHALA COTZAL TC</option>';
+            SITIO_options_str  += '<option value="BILLBOARD VECESA VILLALOBOS">BILLBOARD VECESA VILLALOBOS</option>';
+            SITIO_options_str  += '<option value="BLVD. EL NARANJO EEGSA_XT_EGG">BLVD. EL NARANJO EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="BLVD. JUSTO RUFINO BARRIOS EEGSA_XT_EGG">BLVD. JUSTO RUFINO BARRIOS EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="BOCA DEL MONTE II">BOCA DEL MONTE II</option>';
+            SITIO_options_str  += '<option value="BOLIVIA">BOLIVIA</option>';
+            SITIO_options_str  += '<option value="BOSQUES DE SAN NICOLAS II">BOSQUES DE SAN NICOLAS II</option>';
+            SITIO_options_str  += '<option value="BOVEDA CHIQUILAJA TC">BOVEDA CHIQUILAJA TC</option>';
+            SITIO_options_str  += '<option value="BUCARO_XT">BUCARO_XT</option>';
+            SITIO_options_str  += '<option value="BUENA VISTA BARBERENA">BUENA VISTA BARBERENA</option>';
+            SITIO_options_str  += '<option value="BUENA VISTA SAN MIGUEL PETAPA XT">BUENA VISTA SAN MIGUEL PETAPA XT</option>';
+            SITIO_options_str  += '<option value="BUJXUB">BUJXUB</option>';
+            SITIO_options_str  += '<option value="BULEJ">BULEJ</option>';
+            SITIO_options_str  += '<option value="Banasa 3 La Sierra">Banasa 3 La Sierra</option>';
+            SITIO_options_str  += '<option value="Barrio Milla 38 SBA">Barrio Milla 38 SBA</option>';
+            SITIO_options_str  += '<option value="Buena Vista Miramar">Buena Vista Miramar</option>';
+            SITIO_options_str  += '<option value="Buena Vista San Marcos">Buena Vista San Marcos</option>';
+            SITIO_options_str  += '<option value="CABALLO BLANCO">CABALLO BLANCO</option>';
+            SITIO_options_str  += '<option value="CAHABONCITO">CAHABONCITO</option>';
+            SITIO_options_str  += '<option value="CAJOLA">CAJOLA</option>';
+            SITIO_options_str  += '<option value="CAJOLA II">CAJOLA II</option>';
+            SITIO_options_str  += '<option value="CAJOLÁ-SAN FRANCISCO LA UNIÓN 1_XT_">CAJOLÁ-SAN FRANCISCO LA UNIÓN 1_XT_</option>';
+            SITIO_options_str  += '<option value="CALAHUACHÉ_XT_SB">CALAHUACHÉ_XT_SB</option>';
+            SITIO_options_str  += '<option value="CALLE DEL CERRO ZONA 1">CALLE DEL CERRO ZONA 1</option>';
+            SITIO_options_str  += '<option value="CALLE REAL DE PETAPA_XT_SBA">CALLE REAL DE PETAPA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="CALZADA ARZU 1 XT ST -2026">CALZADA ARZU 1 XT ST -2026</option>';
+            SITIO_options_str  += '<option value="CALZADA SANTA LUCÍA ANTIGUA_X">CALZADA SANTA LUCÍA ANTIGUA_X</option>';
+            SITIO_options_str  += '<option value="CAMINO REAL ANTIGUA">CAMINO REAL ANTIGUA</option>';
+            SITIO_options_str  += '<option value="CAMINO REAL DE TIKAL">CAMINO REAL DE TIKAL</option>';
+            SITIO_options_str  += '<option value="CAMOJAITO">CAMOJAITO</option>';
+            SITIO_options_str  += '<option value="CAMOTAN TC">CAMOTAN TC</option>';
+            SITIO_options_str  += '<option value="CAMPAT TC">CAMPAT TC</option>';
+            SITIO_options_str  += '<option value="CAMPO SANTIAGO ATITLAN">CAMPO SANTIAGO ATITLAN</option>';
+            SITIO_options_str  += '<option value="CANALES">CANALES</option>';
+            SITIO_options_str  += '<option value="CANALITOS 2">CANALITOS 2</option>';
+            SITIO_options_str  += '<option value="CANASTA SECA TC">CANASTA SECA TC</option>';
+            SITIO_options_str  += '<option value="CANCHACAN II TC">CANCHACAN II TC</option>';
+            SITIO_options_str  += '<option value="CANICHAN TC">CANICHAN TC</option>';
+            SITIO_options_str  += '<option value="CANILLA">CANILLA</option>';
+            SITIO_options_str  += '<option value="CANOAS ZONA 17">CANOAS ZONA 17</option>';
+            SITIO_options_str  += '<option value="CANTON PAJALES SAN ANDRES VILLA SECA TC">CANTON PAJALES SAN ANDRES VILLA SECA TC</option>';
+            SITIO_options_str  += '<option value="CANTON VILLA ALICIA_XT_SBA">CANTON VILLA ALICIA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="CANTON XOLSACMAJA">CANTON XOLSACMAJA</option>';
+            SITIO_options_str  += '<option value="CANTONES CHIMENQUE">CANTONES CHIMENQUE</option>';
+            SITIO_options_str  += '<option value="CANTÓN PERÚ MAZATENAN">CANTÓN PERÚ MAZATENAN</option>';
+            SITIO_options_str  += '<option value="CAQUIPEC">CAQUIPEC</option>';
+            SITIO_options_str  += '<option value="CARIBE RUBELSUL TC">CARIBE RUBELSUL TC</option>';
+            SITIO_options_str  += '<option value="CARRETERA PUERTO IZTAPA - MONTERRICO">CARRETERA PUERTO IZTAPA - MONTERRICO</option>';
+            SITIO_options_str  += '<option value="CASA MANNEN">CASA MANNEN</option>';
+            SITIO_options_str  += '<option value="CASERIO ALAMEDA">CASERIO ALAMEDA</option>';
+            SITIO_options_str  += '<option value="CASERIO EL CAMPO LA UNION">CASERIO EL CAMPO LA UNION</option>';
+            SITIO_options_str  += '<option value="CASERIO NUEVA LINDA TC">CASERIO NUEVA LINDA TC</option>';
+            SITIO_options_str  += '<option value="CASTILLO SAN FELIPE">CASTILLO SAN FELIPE</option>';
+            SITIO_options_str  += '<option value="CATARINA_XT">CATARINA_XT</option>';
+            SITIO_options_str  += '<option value="CAVISA PETAPA">CAVISA PETAPA</option>';
+            SITIO_options_str  += '<option value="CAÑADAS DE PETAPA XT T">CAÑADAS DE PETAPA XT T</option>';
+            SITIO_options_str  += '<option value="CC PORTALES_XT">CC PORTALES_XT</option>';
+            SITIO_options_str  += '<option value="CEIBITA QUEZADA TC">CEIBITA QUEZADA TC</option>';
+            SITIO_options_str  += '<option value="CEMENTERIO MALACATAN">CEMENTERIO MALACATAN</option>';
+            SITIO_options_str  += '<option value="CEMENTOS PROGRESO ZONA 6">CEMENTOS PROGRESO ZONA 6</option>';
+            SITIO_options_str  += '<option value="CENTRO COMERCIAL MAJADAS 11">CENTRO COMERCIAL MAJADAS 11</option>';
+            SITIO_options_str  += '<option value="CENTRO COMERCIAL MAJADAS I">CENTRO COMERCIAL MAJADAS I</option>';
+            SITIO_options_str  += '<option value="CENTRO COMERCIAL MAJADAS II">CENTRO COMERCIAL MAJADAS II</option>';
+            SITIO_options_str  += '<option value="CENTRO COMERCIAL MAJADAS III">CENTRO COMERCIAL MAJADAS III</option>';
+            SITIO_options_str  += '<option value="CENTRO LAS CHARCAS">CENTRO LAS CHARCAS</option>';
+            SITIO_options_str  += '<option value="CERINAL">CERINAL</option>';
+            SITIO_options_str  += '<option value="CERRITO DE LA VIRGEN">CERRITO DE LA VIRGEN</option>';
+            SITIO_options_str  += '<option value="CERRO ALTO TC">CERRO ALTO TC</option>';
+            SITIO_options_str  += '<option value="CERRO CHILE AMATE_TC">CERRO CHILE AMATE_TC</option>';
+            SITIO_options_str  += '<option value="CERRO EL FARO">CERRO EL FARO</option>';
+            SITIO_options_str  += '<option value="CERRO EL RANCHO EXP">CERRO EL RANCHO EXP</option>';
+            SITIO_options_str  += '<option value="CERRO LOS JAZMINES_XT_TBS">CERRO LOS JAZMINES_XT_TBS</option>';
+            SITIO_options_str  += '<option value="CERRO QUEZALTEPEQUE TC">CERRO QUEZALTEPEQUE TC</option>';
+            SITIO_options_str  += '<option value="CHACSAQUIL">CHACSAQUIL</option>';
+            SITIO_options_str  += '<option value="CHAGÜITE_X">CHAGÜITE_X</option>';
+            SITIO_options_str  += '<option value="CHAHAL II">CHAHAL II</option>';
+            SITIO_options_str  += '<option value="CHAJALAJYA">CHAJALAJYA</option>';
+            SITIO_options_str  += '<option value="CHAJCHEJ TC">CHAJCHEJ TC</option>';
+            SITIO_options_str  += '<option value="CHAJUL">CHAJUL</option>';
+            SITIO_options_str  += '<option value="CHALANCHAC TC">CHALANCHAC TC</option>';
+            SITIO_options_str  += '<option value="CHALET LAPALAPA">CHALET LAPALAPA</option>';
+            SITIO_options_str  += '<option value="CHAMAC USPANTAN TC">CHAMAC USPANTAN TC</option>';
+            SITIO_options_str  += '<option value="CHAMIL">CHAMIL</option>';
+            SITIO_options_str  += '<option value="CHAMPAS DE PINULA">CHAMPAS DE PINULA</option>';
+            SITIO_options_str  += '<option value="CHAMPERICO CENTRO_XT_TR">CHAMPERICO CENTRO_XT_TR</option>';
+            SITIO_options_str  += '<option value="CHANQUEJELVE TC">CHANQUEJELVE TC</option>';
+            SITIO_options_str  += '<option value="CHAYEN">CHAYEN</option>';
+            SITIO_options_str  += '<option value="CHAYEN PUEBLO">CHAYEN PUEBLO</option>';
+            SITIO_options_str  += '<option value="CHEGUATE FRONTERA">CHEGUATE FRONTERA</option>';
+            SITIO_options_str  += '<option value="CHEJOJ">CHEJOJ</option>';
+            SITIO_options_str  += '<option value="CHIAPAS">CHIAPAS</option>';
+            SITIO_options_str  += '<option value="CHICHAJ TC">CHICHAJ TC</option>';
+            SITIO_options_str  += '<option value="CHICOJOM">CHICOJOM</option>';
+            SITIO_options_str  += '<option value="CHICUACAB">CHICUACAB</option>';
+            SITIO_options_str  += '<option value="CHIGUASTE">CHIGUASTE</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO 2_XT_DET">CHIMALTENANGO 2_XT_DET</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO CIUDAD TC">CHIMALTENANGO CIUDAD TC</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO II">CHIMALTENANGO II</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO IV XT ST">CHIMALTENANGO IV XT ST</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO SUR">CHIMALTENANGO SUR</option>';
+            SITIO_options_str  += '<option value="CHIMALTENANGO SUR 2026">CHIMALTENANGO SUR 2026</option>';
+            SITIO_options_str  += '<option value="CHIMUSHE TC">CHIMUSHE TC</option>';
+            SITIO_options_str  += '<option value="CHINACA III TC">CHINACA III TC</option>';
+            SITIO_options_str  += '<option value="CHINAJPU">CHINAJPU</option>';
+            SITIO_options_str  += '<option value="CHIPIACUL">CHIPIACUL</option>';
+            SITIO_options_str  += '<option value="CHIPU TC">CHIPU TC</option>';
+            SITIO_options_str  += '<option value="CHIQUIMULA III TC">CHIQUIMULA III TC</option>';
+            SITIO_options_str  += '<option value="CHIQUIMULILLA TC">CHIQUIMULILLA TC</option>';
+            SITIO_options_str  += '<option value="CHISPAN_TC">CHISPAN_TC</option>';
+            SITIO_options_str  += '<option value="CHITATUL XT">CHITATUL XT</option>';
+            SITIO_options_str  += '<option value="CHITUL">CHITUL</option>';
+            SITIO_options_str  += '<option value="CHOALIMON">CHOALIMON</option>';
+            SITIO_options_str  += '<option value="CHOATALUM">CHOATALUM</option>';
+            SITIO_options_str  += '<option value="CHUARRANCHO II">CHUARRANCHO II</option>';
+            SITIO_options_str  += '<option value="CHUGHEXA">CHUGHEXA</option>';
+            SITIO_options_str  += '<option value="CHUISUC">CHUISUC</option>';
+            SITIO_options_str  += '<option value="CHUJULIMUL">CHUJULIMUL</option>';
+            SITIO_options_str  += '<option value="CHULAMAR">CHULAMAR</option>';
+            SITIO_options_str  += '<option value="CHUPOL">CHUPOL</option>';
+            SITIO_options_str  += '<option value="CHURISCHAN TC">CHURISCHAN TC</option>';
+            SITIO_options_str  += '<option value="CINCO ARROYOS">CINCO ARROYOS</option>';
+            SITIO_options_str  += '<option value="CIPRESES NUEVO PROGRESO">CIPRESES NUEVO PROGRESO</option>';
+            SITIO_options_str  += '<option value="CIRCUS PIZZA -  EASY MACRO">CIRCUS PIZZA -  EASY MACRO</option>';
+            SITIO_options_str  += '<option value="CIUDAD VIEJA 5">CIUDAD VIEJA 5</option>';
+            SITIO_options_str  += '<option value="CIUDAD VIEJA OCCIDENTE_XT">CIUDAD VIEJA OCCIDENTE_XT</option>';
+            SITIO_options_str  += '<option value="CIUDAD VIEJA SACATEPEQUEZ">CIUDAD VIEJA SACATEPEQUEZ</option>';
+            SITIO_options_str  += '<option value="CIUDAD VIEJA SACATEPEQUEZ II">CIUDAD VIEJA SACATEPEQUEZ II</option>';
+            SITIO_options_str  += '<option value="CLIMENTORO TC">CLIMENTORO TC</option>';
+            SITIO_options_str  += '<option value="CLUB PROCERES ZONA 10">CLUB PROCERES ZONA 10</option>';
+            SITIO_options_str  += '<option value="COATEPEQUE NORTE_XT_TC">COATEPEQUE NORTE_XT_TC</option>';
+            SITIO_options_str  += '<option value="COBAN II">COBAN II</option>';
+            SITIO_options_str  += '<option value="COBAN I_EXP">COBAN I_EXP</option>';
+            SITIO_options_str  += '<option value="COBAN ZONA 10">COBAN ZONA 10</option>';
+            SITIO_options_str  += '<option value="COBÁN-CARCHÁ_">COBÁN-CARCHÁ_</option>';
+            SITIO_options_str  += '<option value="COCALES SAN CARLOS">COCALES SAN CARLOS</option>';
+            SITIO_options_str  += '<option value="COL (Circle Of Life) Año nuev">COL (Circle Of Life) Año nuev</option>';
+            SITIO_options_str  += '<option value="COL. EL RECUERDO JOCOTENANGO">COL. EL RECUERDO JOCOTENANGO</option>';
+            SITIO_options_str  += '<option value="COLOMBA CENTRO_XT_TR">COLOMBA CENTRO_XT_TR</option>';
+            SITIO_options_str  += '<option value="COLONIA 20 DE OCTUBRE">COLONIA 20 DE OCTUBRE</option>';
+            SITIO_options_str  += '<option value="COLONIA ABRIL 2 EEGSA_XT_EGG">COLONIA ABRIL 2 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA BELEN XELA ZONA 7">COLONIA BELEN XELA ZONA 7</option>';
+            SITIO_options_str  += '<option value="COLONIA BELEN XELA ZONA 7_remoto (MP QUETZALTENANGO)">COLONIA BELEN XELA ZONA 7_remoto (MP QUETZALTENANGO)</option>';
+            SITIO_options_str  += '<option value="COLONIA CASA CAMPO VILLA  NUEV">COLONIA CASA CAMPO VILLA  NUEV</option>';
+            SITIO_options_str  += '<option value="COLONIA DEL MAESTRO 1 EEGSA XT EEGSA">COLONIA DEL MAESTRO 1 EEGSA XT EEGSA</option>';
+            SITIO_options_str  += '<option value="COLONIA EL LIMON ZONA 18">COLONIA EL LIMON ZONA 18</option>';
+            SITIO_options_str  += '<option value="COLONIA ESPAÑA_XT_SB">COLONIA ESPAÑA_XT_SB</option>';
+            SITIO_options_str  += '<option value="COLONIA LA DELICIAS SANTA LUCIA COTZ">COLONIA LA DELICIAS SANTA LUCIA COTZ</option>';
+            SITIO_options_str  += '<option value="COLONIA LA ESTANCIA TC">COLONIA LA ESTANCIA TC</option>';
+            SITIO_options_str  += '<option value="COLONIA LANDIVAR">COLONIA LANDIVAR</option>';
+            SITIO_options_str  += '<option value="COLONIA LANDIVAR 2 EEGSA_XT_EGG">COLONIA LANDIVAR 2 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA LAS DELICIAS SANTA LUCIA COTZ">COLONIA LAS DELICIAS SANTA LUCIA COTZ</option>';
+            SITIO_options_str  += '<option value="COLONIA LOS OLIVOS">COLONIA LOS OLIVOS</option>';
+            SITIO_options_str  += '<option value="COLONIA MARTINICO II">COLONIA MARTINICO II</option>';
+            SITIO_options_str  += '<option value="COLONIA MAYA">COLONIA MAYA</option>';
+            SITIO_options_str  += '<option value="COLONIA MAYA EXP">COLONIA MAYA EXP</option>';
+            SITIO_options_str  += '<option value="COLONIA MAYA XT TR-2026">COLONIA MAYA XT TR-2026</option>';
+            SITIO_options_str  += '<option value="COLONIA MAYA_XT_TR">COLONIA MAYA_XT_TR</option>';
+            SITIO_options_str  += '<option value="COLONIA MONTE CARMELO XT TR">COLONIA MONTE CARMELO XT TR</option>';
+            SITIO_options_str  += '<option value="COLONIA OAKLAND II">COLONIA OAKLAND II</option>';
+            SITIO_options_str  += '<option value="COLONIA PARAISO MIXCO">COLONIA PARAISO MIXCO</option>';
+            SITIO_options_str  += '<option value="COLONIA PAVON 1 EEGSA XT">COLONIA PAVON 1 EEGSA XT</option>';
+            SITIO_options_str  += '<option value="COLONIA PAVON 1 EEGSA_XT_EGG">COLONIA PAVON 1 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA PRIMERO DE MAYO EEGSA_XT_EGG">COLONIA PRIMERO DE MAYO EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA ROOSEVELT_XT">COLONIA ROOSEVELT_XT</option>';
+            SITIO_options_str  += '<option value="COLONIA SAN ANGEL EEGSA_XT_EGG">COLONIA SAN ANGEL EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA SAN ISIDRO MALACATÁN_X">COLONIA SAN ISIDRO MALACATÁN_X</option>';
+            SITIO_options_str  += '<option value="COLONIA SANTA ISABEL III   ZONA 6 TC">COLONIA SANTA ISABEL III   ZONA 6 TC</option>';
+            SITIO_options_str  += '<option value="COLONIA SANTA ISABEL VILLA NUEVA EEGSA_XT_EGG">COLONIA SANTA ISABEL VILLA NUEVA EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="COLONIA UNIVERSAL QUETZALTENANGO">COLONIA UNIVERSAL QUETZALTENANGO</option>';
+            SITIO_options_str  += '<option value="COLONIA VENEZUELA ZONA 21 EEGSA_XT">COLONIA VENEZUELA ZONA 21 EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="COLOTENANGO">COLOTENANGO</option>';
+            SITIO_options_str  += '<option value="COLOTENANGO II">COLOTENANGO II</option>';
+            SITIO_options_str  += '<option value="COMEX TC">COMEX TC</option>';
+            SITIO_options_str  += '<option value="COMITANCILLO">COMITANCILLO</option>';
+            SITIO_options_str  += '<option value="COMITANCILLO_XT">COMITANCILLO_XT</option>';
+            SITIO_options_str  += '<option value="COMUNIDAD CHOCOLA TC_XT_TC">COMUNIDAD CHOCOLA TC_XT_TC</option>';
+            SITIO_options_str  += '<option value="COMUNIDAD LA CONCHA">COMUNIDAD LA CONCHA</option>';
+            SITIO_options_str  += '<option value="CONCEPCION PITAL">CONCEPCION PITAL</option>';
+            SITIO_options_str  += '<option value="CONCEPCION SOLOLA">CONCEPCION SOLOLA</option>';
+            SITIO_options_str  += '<option value="CONCIERTO GIRA PEPSI_LGB_shelter 2026">CONCIERTO GIRA PEPSI_LGB_shelter 2026</option>';
+            SITIO_options_str  += '<option value="CONDADO ALMERIA">CONDADO ALMERIA</option>';
+            SITIO_options_str  += '<option value="CONDADO CATALINA EEGSA_XT_EGG">CONDADO CATALINA EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="CONDADO CONCEPCION">CONDADO CONCEPCION</option>';
+            SITIO_options_str  += '<option value="CONDADO DE MINERVA">CONDADO DE MINERVA</option>';
+            SITIO_options_str  += '<option value="CONDADO DE SAN JUAN">CONDADO DE SAN JUAN</option>';
+            SITIO_options_str  += '<option value="CONDOMINIO LAS PRADERAS POSTE">CONDOMINIO LAS PRADERAS POSTE</option>';
+            SITIO_options_str  += '<option value="CONGRESO">CONGRESO</option>';
+            SITIO_options_str  += '<option value="CONVENTO DE CAPUCHINAS ANTIGUA_XT_G&C">CONVENTO DE CAPUCHINAS ANTIGUA_XT_G&C</option>';
+            SITIO_options_str  += '<option value="CONVENTO DE CAPUCHINAS ANTIGUA_XT_G&C_2026">CONVENTO DE CAPUCHINAS ANTIGUA_XT_G&C_2026</option>';
+            SITIO_options_str  += '<option value="COSTA BELLA XT">COSTA BELLA XT</option>';
+            SITIO_options_str  += '<option value="CRUCE A CERRITOS">CRUCE A CERRITOS</option>';
+            SITIO_options_str  += '<option value="CRUCE A COLOMBA_XT_SBA">CRUCE A COLOMBA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="CRUCE PERDIDO">CRUCE PERDIDO</option>';
+            SITIO_options_str  += '<option value="CRUCE TECUN MALACATAN">CRUCE TECUN MALACATAN</option>';
+            SITIO_options_str  += '<option value="CRUZ NUEVA">CRUZ NUEVA</option>';
+            SITIO_options_str  += '<option value="CUATRO CAMINOS- TOTO 2_XT">CUATRO CAMINOS- TOTO 2_XT</option>';
+            SITIO_options_str  += '<option value="CUATRO CAMINOS- TOTO 2_XT_2026">CUATRO CAMINOS- TOTO 2_XT_2026</option>';
+            SITIO_options_str  += '<option value="CUBULCO_XT">CUBULCO_XT</option>';
+            SITIO_options_str  += '<option value="CUCHILLA DEL CARMEN 2 EEGSA_XT_EGG">CUCHILLA DEL CARMEN 2 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="CUCHUMATANES II">CUCHUMATANES II</option>';
+            SITIO_options_str  += '<option value="CUESTA VILLALOBOS">CUESTA VILLALOBOS</option>';
+            SITIO_options_str  += '<option value="CUESTA VILLALOBOS 2">CUESTA VILLALOBOS 2</option>';
+            SITIO_options_str  += '<option value="CUILCO II">CUILCO II</option>';
+            SITIO_options_str  += '<option value="CUM">CUM</option>';
+            SITIO_options_str  += '<option value="CUMBRE OLINTEPEQUE TC">CUMBRE OLINTEPEQUE TC</option>';
+            SITIO_options_str  += '<option value="CUNOROC TR">CUNOROC TR</option>';
+            SITIO_options_str  += '<option value="CUNÉN_XT_SB">CUNÉN_XT_SB</option>';
+            SITIO_options_str  += '<option value="CURRUCHIQUE">CURRUCHIQUE</option>';
+            SITIO_options_str  += '<option value="CURRUCHIQUE_XT">CURRUCHIQUE_XT</option>';
+            SITIO_options_str  += '<option value="CUYOTENANGO SUR_XT_SBA">CUYOTENANGO SUR_XT_SBA</option>';
+            SITIO_options_str  += '<option value="Caldera">Caldera</option>';
+            SITIO_options_str  += '<option value="Canton Sashico">Canton Sashico</option>';
+            SITIO_options_str  += '<option value="Casa Blanca">Casa Blanca</option>';
+            SITIO_options_str  += '<option value="Casa Mannen SBA (LG5935)">Casa Mannen SBA (LG5935)</option>';
+            SITIO_options_str  += '<option value="Castañas Zona 1">Castañas Zona 1</option>';
+            SITIO_options_str  += '<option value="Cañadas de Belen SB">Cañadas de Belen SB</option>';
+            SITIO_options_str  += '<option value="Cerro Ananopa">Cerro Ananopa</option>';
+            SITIO_options_str  += '<option value="Cerro Chame TC">Cerro Chame TC</option>';
+            SITIO_options_str  += '<option value="Cerro De Oro C">Cerro De Oro C</option>';
+            SITIO_options_str  += '<option value="Cerro El Naranjo">Cerro El Naranjo</option>';
+            SITIO_options_str  += '<option value="Cerro Lindo">Cerro Lindo</option>';
+            SITIO_options_str  += '<option value="Cerro Quetzaltepeque">Cerro Quetzaltepeque</option>';
+            SITIO_options_str  += '<option value="Cerro Tecolote">Cerro Tecolote</option>';
+            SITIO_options_str  += '<option value="Cerro Tontoles">Cerro Tontoles</option>';
+            SITIO_options_str  += '<option value="Chiquel Chimaltenango">Chiquel Chimaltenango</option>';
+            SITIO_options_str  += '<option value="Chitocan_(3865)">Chitocan_(3865)</option>';
+            SITIO_options_str  += '<option value="Cienaga Grande">Cienaga Grande</option>';
+            SITIO_options_str  += '<option value="Cimientos Las Cruces">Cimientos Las Cruces</option>';
+            SITIO_options_str  += '<option value="Cobán Zona 10 Bilbor">Cobán Zona 10 Bilbor</option>';
+            SITIO_options_str  += '<option value="Colonia Utatlan Quiche">Colonia Utatlan Quiche</option>';
+            SITIO_options_str  += '<option value="Colonia_Maria_Tecun TC">Colonia_Maria_Tecun TC</option>';
+            SITIO_options_str  += '<option value="Concepcion Chinan">Concepcion Chinan</option>';
+            SITIO_options_str  += '<option value="Construcciones de Guatemala_SECTORES REMOTO">Construcciones de Guatemala_SECTORES REMOTO</option>';
+            SITIO_options_str  += '<option value="Contepeque">Contepeque</option>';
+            SITIO_options_str  += '<option value="Cuesta Del Aire TC">Cuesta Del Aire TC</option>';
+            SITIO_options_str  += '<option value="DG CAMINOS">DG CAMINOS</option>';
+            SITIO_options_str  += '<option value="DHL_XT">DHL_XT</option>';
+            SITIO_options_str  += '<option value="DIAGONAL 3 XELA SBA">DIAGONAL 3 XELA SBA</option>';
+            SITIO_options_str  += '<option value="DON BOSCO">DON BOSCO</option>';
+            SITIO_options_str  += '<option value="DON BOSCO ATANASIO">DON BOSCO ATANASIO</option>';
+            SITIO_options_str  += '<option value="DUKE ENERGY  ARIZON">DUKE ENERGY  ARIZON</option>';
+            SITIO_options_str  += '<option value="EDIFICIO AMBERES">EDIFICIO AMBERES</option>';
+            SITIO_options_str  += '<option value="EDIFICIO CATANIA">EDIFICIO CATANIA</option>';
+            SITIO_options_str  += '<option value="EDIFICIO CRECE">EDIFICIO CRECE</option>';
+            SITIO_options_str  += '<option value="EDIFICIO EL PASO CHIQUIMULA">EDIFICIO EL PASO CHIQUIMULA</option>';
+            SITIO_options_str  += '<option value="EDIFICIO GIL_XT">EDIFICIO GIL_XT</option>';
+            SITIO_options_str  += '<option value="EDIFICIO JACARANDAS 2026">EDIFICIO JACARANDAS 2026</option>';
+            SITIO_options_str  += '<option value="EDIFICIO JACARANDAS 2026 -1">EDIFICIO JACARANDAS 2026 -1</option>';
+            SITIO_options_str  += '<option value="EDIFICIO MAZVAL (GUA019)_XT">EDIFICIO MAZVAL (GUA019)_XT</option>';
+            SITIO_options_str  += '<option value="EDIFICIO SIXTINO_XT">EDIFICIO SIXTINO_XT</option>';
+            SITIO_options_str  += '<option value="EL ADELANTO_XT_SBA">EL ADELANTO_XT_SBA</option>';
+            SITIO_options_str  += '<option value="EL AMANECER OLINTEPEQUE TC_XT">EL AMANECER OLINTEPEQUE TC_XT</option>';
+            SITIO_options_str  += '<option value="EL AMANECER OLINTEPEQUE TC_XT_TC">EL AMANECER OLINTEPEQUE TC_XT_TC</option>';
+            SITIO_options_str  += '<option value="EL ASINTAL">EL ASINTAL</option>';
+            SITIO_options_str  += '<option value="EL ASTILLERO ESCUINTLA TC">EL ASTILLERO ESCUINTLA TC</option>';
+            SITIO_options_str  += '<option value="EL BOSQUE SAN LUCAS">EL BOSQUE SAN LUCAS</option>';
+            SITIO_options_str  += '<option value="EL Brito XT">EL Brito XT</option>';
+            SITIO_options_str  += '<option value="EL CARMEN ZONA 12 TR">EL CARMEN ZONA 12 TR</option>';
+            SITIO_options_str  += '<option value="EL CARRIZAL BILBAO">EL CARRIZAL BILBAO</option>';
+            SITIO_options_str  += '<option value="EL CAULOTE DEL GOLFO">EL CAULOTE DEL GOLFO</option>';
+            SITIO_options_str  += '<option value="EL CEIBO">EL CEIBO</option>';
+            SITIO_options_str  += '<option value="EL CENTRO_XT_TR">EL CENTRO_XT_TR</option>';
+            SITIO_options_str  += '<option value="EL CERINAL_XT">EL CERINAL_XT</option>';
+            SITIO_options_str  += '<option value="EL CUJITO TC">EL CUJITO TC</option>';
+            SITIO_options_str  += '<option value="EL DURAZNO CARRETERA_XT">EL DURAZNO CARRETERA_XT</option>';
+            SITIO_options_str  += '<option value="EL EDEN PETEN">EL EDEN PETEN</option>';
+            SITIO_options_str  += '<option value="EL ESFUERZO">EL ESFUERZO</option>';
+            SITIO_options_str  += '<option value="EL ESFUERZO EL ESTOR">EL ESFUERZO EL ESTOR</option>';
+            SITIO_options_str  += '<option value="EL ESFUERZO IXCAN TC">EL ESFUERZO IXCAN TC</option>';
+            SITIO_options_str  += '<option value="EL ESTOR_XT">EL ESTOR_XT</option>';
+            SITIO_options_str  += '<option value="EL FRUTAL">EL FRUTAL</option>';
+            SITIO_options_str  += '<option value="EL JAGUEY EEGSA_XT">EL JAGUEY EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="EL JARDIN SANTO DOMINGO_TC">EL JARDIN SANTO DOMINGO_TC</option>';
+            SITIO_options_str  += '<option value="EL JAULON">EL JAULON</option>';
+            SITIO_options_str  += '<option value="EL LIMON JUTIAPA">EL LIMON JUTIAPA</option>';
+            SITIO_options_str  += '<option value="EL LOBO">EL LOBO</option>';
+            SITIO_options_str  += '<option value="EL MANANTIAL">EL MANANTIAL</option>';
+            SITIO_options_str  += '<option value="EL MANZANILLO MIXCO">EL MANZANILLO MIXCO</option>';
+            SITIO_options_str  += '<option value="EL MANZANO LA LIBERTAD">EL MANZANO LA LIBERTAD</option>';
+            SITIO_options_str  += '<option value="EL MORAL URUGUAY">EL MORAL URUGUAY</option>';
+            SITIO_options_str  += '<option value="EL MUL XT">EL MUL XT</option>';
+            SITIO_options_str  += '<option value="EL NARANJO CENTRO">EL NARANJO CENTRO</option>';
+            SITIO_options_str  += '<option value="EL NARANJO ESCUINTLA">EL NARANJO ESCUINTLA</option>';
+            SITIO_options_str  += '<option value="EL NARANJO JUTIAPA">EL NARANJO JUTIAPA</option>';
+            SITIO_options_str  += '<option value="EL OLVIDO TC">EL OLVIDO TC</option>';
+            SITIO_options_str  += '<option value="EL PAJAL">EL PAJAL</option>';
+            SITIO_options_str  += '<option value="EL PALMAR">EL PALMAR</option>';
+            SITIO_options_str  += '<option value="EL PARAISO PALENCIA">EL PARAISO PALENCIA</option>';
+            SITIO_options_str  += '<option value="EL PORVENIR SAN MARCOS_XT_SBA">EL PORVENIR SAN MARCOS_XT_SBA</option>';
+            SITIO_options_str  += '<option value="EL PROGRESO ACHUAPA">EL PROGRESO ACHUAPA</option>';
+            SITIO_options_str  += '<option value="EL RANCHO">EL RANCHO</option>';
+            SITIO_options_str  += '<option value="EL RINCON AMATITLAN">EL RINCON AMATITLAN</option>';
+            SITIO_options_str  += '<option value="EL RODEO HUEHUE">EL RODEO HUEHUE</option>';
+            SITIO_options_str  += '<option value="EL RODEO HUHUE (2791)">EL RODEO HUHUE (2791)</option>';
+            SITIO_options_str  += '<option value="EL RODEO SAN MARCOS_XT_SBA">EL RODEO SAN MARCOS_XT_SBA</option>';
+            SITIO_options_str  += '<option value="EL SALAMAR">EL SALAMAR</option>';
+            SITIO_options_str  += '<option value="EL SALITRE SANTA ROSA">EL SALITRE SANTA ROSA</option>';
+            SITIO_options_str  += '<option value="EL SAUCE ZONA 2">EL SAUCE ZONA 2</option>';
+            SITIO_options_str  += '<option value="EL SEMILLERO 2_XT">EL SEMILLERO 2_XT</option>';
+            SITIO_options_str  += '<option value="EL SUCHIATE">EL SUCHIATE</option>';
+            SITIO_options_str  += '<option value="EL SUYATE TC">EL SUYATE TC</option>';
+            SITIO_options_str  += '<option value="EL TABLON">EL TABLON</option>';
+            SITIO_options_str  += '<option value="EL TABLON SOLOLA">EL TABLON SOLOLA</option>';
+            SITIO_options_str  += '<option value="EL TERRERO">EL TERRERO</option>';
+            SITIO_options_str  += '<option value="EL TOPE">EL TOPE</option>';
+            SITIO_options_str  += '<option value="EMBARCADERO PANAJACHEL 2025_TEMPORAL">EMBARCADERO PANAJACHEL 2025_TEMPORAL</option>';
+            SITIO_options_str  += '<option value="EMF TEMPORAL">EMF TEMPORAL</option>';
+            SITIO_options_str  += '<option value="EMF TEMPORAL 2025">EMF TEMPORAL 2025</option>';
+            SITIO_options_str  += '<option value="ENCINO GACHO">ENCINO GACHO</option>';
+            SITIO_options_str  += '<option value="ENTRADA A LOS VERDES_XT">ENTRADA A LOS VERDES_XT</option>';
+            SITIO_options_str  += '<option value="ENTRADA A SAN FRANCISCO_XT_TR">ENTRADA A SAN FRANCISCO_XT_TR</option>';
+            SITIO_options_str  += '<option value="ENTRADA A TIKAL">ENTRADA A TIKAL</option>';
+            SITIO_options_str  += '<option value="ESCUINTLA CENTRO (ESC151)_XT_SBA">ESCUINTLA CENTRO (ESC151)_XT_SBA</option>';
+            SITIO_options_str  += '<option value="ESCUINTLA III">ESCUINTLA III</option>';
+            SITIO_options_str  += '<option value="ESCUINTLA III_2026">ESCUINTLA III_2026</option>';
+            SITIO_options_str  += '<option value="ESCUINTLA V">ESCUINTLA V</option>';
+            SITIO_options_str  += '<option value="ESPERANZA CARRETERA XT ST">ESPERANZA CARRETERA XT ST</option>';
+            SITIO_options_str  += '<option value="ESPERANZA CARRETERA XT ST_2026_1">ESPERANZA CARRETERA XT ST_2026_1</option>';
+            SITIO_options_str  += '<option value="ESQUIPULAS 3 UFINET_XT_UFF">ESQUIPULAS 3 UFINET_XT_UFF</option>';
+            SITIO_options_str  += '<option value="ESQUIPULAS 6 UFINET_XT_UFF">ESQUIPULAS 6 UFINET_XT_UFF</option>';
+            SITIO_options_str  += '<option value="ESQUIPULAS II">ESQUIPULAS II</option>';
+            SITIO_options_str  += '<option value="ESTACION PALIN ESC">ESTACION PALIN ESC</option>';
+            SITIO_options_str  += '<option value="ESTADIO AMATITLAN_DESMONTAJE">ESTADIO AMATITLAN_DESMONTAJE</option>';
+            SITIO_options_str  += '<option value="ESTADIO DOROTEO GUAMUCH">ESTADIO DOROTEO GUAMUCH</option>';
+            SITIO_options_str  += '<option value="ESTADIO LA LIBERTAD PETEN">ESTADIO LA LIBERTAD PETEN</option>';
+            SITIO_options_str  += '<option value="ESTADIO LOS CUCHUMATANES XT TC_TRASLADO">ESTADIO LOS CUCHUMATANES XT TC_TRASLADO</option>';
+            SITIO_options_str  += '<option value="ESTANCIA DE LA CRUZ">ESTANCIA DE LA CRUZ</option>';
+            SITIO_options_str  += '<option value="EXPLANADA CAYALA">EXPLANADA CAYALA</option>';
+            SITIO_options_str  += '<option value="EXPLANADA CAYALA EEGSA_XT_EGG">EXPLANADA CAYALA EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="El AGUACATE BELLOTAL">El AGUACATE BELLOTAL</option>';
+            SITIO_options_str  += '<option value="El Cajon Cotzumalguapa">El Cajon Cotzumalguapa</option>';
+            SITIO_options_str  += '<option value="El Cerinal TC">El Cerinal TC</option>';
+            SITIO_options_str  += '<option value="El Comalito Jutiapa">El Comalito Jutiapa</option>';
+            SITIO_options_str  += '<option value="El Conacaste">El Conacaste</option>';
+            SITIO_options_str  += '<option value="El Jicaral Jutiapa">El Jicaral Jutiapa</option>';
+            SITIO_options_str  += '<option value="El Jute">El Jute</option>';
+            SITIO_options_str  += '<option value="El Mora">El Mora</option>';
+            SITIO_options_str  += '<option value="El Naranjo Poste TC">El Naranjo Poste TC</option>';
+            SITIO_options_str  += '<option value="El Palmar Shelter OC">El Palmar Shelter OC</option>';
+            SITIO_options_str  += '<option value="El Remate">El Remate</option>';
+            SITIO_options_str  += '<option value="El Semillero">El Semillero</option>';
+            SITIO_options_str  += '<option value="Esperanto Zona 10">Esperanto Zona 10</option>';
+            SITIO_options_str  += '<option value="Eucadia">Eucadia</option>';
+            SITIO_options_str  += '<option value="FINCA CAMPO VERDE">FINCA CAMPO VERDE</option>';
+            SITIO_options_str  += '<option value="FINCA CHOCOLA">FINCA CHOCOLA</option>';
+            SITIO_options_str  += '<option value="FINCA CHOCOLA II">FINCA CHOCOLA II</option>';
+            SITIO_options_str  += '<option value="FINCA EL BALSAMO PANTALEON">FINCA EL BALSAMO PANTALEON</option>';
+            SITIO_options_str  += '<option value="FINCA EL CHAPAYAL">FINCA EL CHAPAYAL</option>';
+            SITIO_options_str  += '<option value="FINCA EL FARO">FINCA EL FARO</option>';
+            SITIO_options_str  += '<option value="FINCA FLORENCIA">FINCA FLORENCIA</option>';
+            SITIO_options_str  += '<option value="FINCA JULIANA_XT_TC">FINCA JULIANA_XT_TC</option>';
+            SITIO_options_str  += '<option value="FINCA NUEVA PROVIDENCIA">FINCA NUEVA PROVIDENCIA</option>';
+            SITIO_options_str  += '<option value="FINCA OLGA MARIA">FINCA OLGA MARIA</option>';
+            SITIO_options_str  += '<option value="FINCA SANTA BARBARA MIXCO">FINCA SANTA BARBARA MIXCO</option>';
+            SITIO_options_str  += '<option value="FINCA VARIEDADES">FINCA VARIEDADES</option>';
+            SITIO_options_str  += '<option value="FINCA_SAN_LUIS_POSTE">FINCA_SAN_LUIS_POSTE</option>';
+            SITIO_options_str  += '<option value="FLOR DE CAMPO">FLOR DE CAMPO</option>';
+            SITIO_options_str  += '<option value="FLORIDA-PRIMERO DE JULIO_XT_SBA">FLORIDA-PRIMERO DE JULIO_XT_SBA</option>';
+            SITIO_options_str  += '<option value="FPK ZONA 9">FPK ZONA 9</option>';
+            SITIO_options_str  += '<option value="FRAIJANES">FRAIJANES</option>';
+            SITIO_options_str  += '<option value="FRITO LAY">FRITO LAY</option>';
+            SITIO_options_str  += '<option value="FRITOLAY_DESCARGA_BARCENAS">FRITOLAY_DESCARGA_BARCENAS</option>';
+            SITIO_options_str  += '<option value="FRONTERA ANGUIATU">FRONTERA ANGUIATU</option>';
+            SITIO_options_str  += '<option value="FRONTERA EL CARMEN II">FRONTERA EL CARMEN II</option>';
+            SITIO_options_str  += '<option value="FUENTES DEL VALLE II VILLA NUEVA">FUENTES DEL VALLE II VILLA NUEVA</option>';
+            SITIO_options_str  += '<option value="FUNDACION  DEL CENTAVO TR">FUNDACION  DEL CENTAVO TR</option>';
+            SITIO_options_str  += '<option value="Finca Las Lomas">Finca Las Lomas</option>';
+            SITIO_options_str  += '<option value="Finca San Ignacio">Finca San Ignacio</option>';
+            SITIO_options_str  += '<option value="Finca San Miguel La Gomera">Finca San Miguel La Gomera</option>';
+            SITIO_options_str  += '<option value="Finca San Vicente EGG">Finca San Vicente EGG</option>';
+            SITIO_options_str  += '<option value="Frontera Agua Caliente">Frontera Agua Caliente</option>';
+            SITIO_options_str  += '<option value="GALERIAS REFORMA">GALERIAS REFORMA</option>';
+            SITIO_options_str  += '<option value="GENOVA">GENOVA</option>';
+            SITIO_options_str  += '<option value="GERONA">GERONA</option>';
+            SITIO_options_str  += '<option value="GERONA TABACALERA">GERONA TABACALERA</option>';
+            SITIO_options_str  += '<option value="GIRA PEPSI 2024">GIRA PEPSI 2024</option>';
+            SITIO_options_str  += '<option value="GIRA PEPSI ESCUINTLA 2025">GIRA PEPSI ESCUINTLA 2025</option>';
+            SITIO_options_str  += '<option value="GIRA PEPSI INTERCULTURAL XELA">GIRA PEPSI INTERCULTURAL XELA</option>';
+            SITIO_options_str  += '<option value="GO_Agua_Caliente_Sija_(1527)">GO_Agua_Caliente_Sija_(1527)</option>';
+            SITIO_options_str  += '<option value="GO_Aldea_Canaan_(4572)">GO_Aldea_Canaan_(4572)</option>';
+            SITIO_options_str  += '<option value="GO_Aldea_Cerro_Verde_(3297)">GO_Aldea_Cerro_Verde_(3297)</option>';
+            SITIO_options_str  += '<option value="GO_Aldea_Los_Encuentros_(1546)">GO_Aldea_Los_Encuentros_(1546)</option>';
+            SITIO_options_str  += '<option value="GO_Aldea_Santa_Rosa_Peten_(1551)">GO_Aldea_Santa_Rosa_Peten_(1551)</option>';
+            SITIO_options_str  += '<option value="GO_Calel_(4346)">GO_Calel_(4346)</option>';
+            SITIO_options_str  += '<option value="GO_Canlech_(1549)">GO_Canlech_(1549)</option>';
+            SITIO_options_str  += '<option value="GO_Catarina_Huehuetenango_(2489)">GO_Catarina_Huehuetenango_(2489)</option>';
+            SITIO_options_str  += '<option value="GO_Cerro_La_Campana(4507)">GO_Cerro_La_Campana(4507)</option>';
+            SITIO_options_str  += '<option value="GO_Cerro_Sija_(3318)">GO_Cerro_Sija_(3318)</option>';
+            SITIO_options_str  += '<option value="GO_Chajixim_(3376)">GO_Chajixim_(3376)</option>';
+            SITIO_options_str  += '<option value="GO_Chicuxab_(1541)">GO_Chicuxab_(1541)</option>';
+            SITIO_options_str  += '<option value="GO_Chiquibul_(1552)">GO_Chiquibul_(1552)</option>';
+            SITIO_options_str  += '<option value="GO_Chocon_(4589)">GO_Chocon_(4589)</option>';
+            SITIO_options_str  += '<option value="GO_Chuy_(2487)">GO_Chuy_(2487)</option>';
+            SITIO_options_str  += '<option value="GO_Colima_(1694)">GO_Colima_(1694)</option>';
+            SITIO_options_str  += '<option value="GO_Cooperativa_Las_Flores_(1720)">GO_Cooperativa_Las_Flores_(1720)</option>';
+            SITIO_options_str  += '<option value="GO_Cruce_A_Lachua_(3422)">GO_Cruce_A_Lachua_(3422)</option>';
+            SITIO_options_str  += '<option value="GO_Cruce_Aldea_El_Pato_(1489)">GO_Cruce_Aldea_El_Pato_(1489)</option>';
+            SITIO_options_str  += '<option value="GO_Cruz_De_Los_Yaguales_(4331)">GO_Cruz_De_Los_Yaguales_(4331)</option>';
+            SITIO_options_str  += '<option value="GO_Dos_Marias_(3419)">GO_Dos_Marias_(3419)</option>';
+            SITIO_options_str  += '<option value="GO_El_Limon_Chisec_(4577)">GO_El_Limon_Chisec_(4577)</option>';
+            SITIO_options_str  += '<option value="GO_El_Lobo_(4524)">GO_El_Lobo_(4524)</option>';
+            SITIO_options_str  += '<option value="GO_El_Paraiso_Chisec_(4573)">GO_El_Paraiso_Chisec_(4573)</option>';
+            SITIO_options_str  += '<option value="GO_Finca_La_Encantadora_(4531)">GO_Finca_La_Encantadora_(4531)</option>';
+            SITIO_options_str  += '<option value="GO_Guaxacana_(3610)">GO_Guaxacana_(3610)</option>';
+            SITIO_options_str  += '<option value="GO_Jolomcu_Dual_(3372)">GO_Jolomcu_Dual_(3372)</option>';
+            SITIO_options_str  += '<option value="GO_Juleque_El_Chal_(1727)">GO_Juleque_El_Chal_(1727)</option>';
+            SITIO_options_str  += '<option value="GO_La_Florida_Huehuetenango_(4367)">GO_La_Florida_Huehuetenango_(4367)</option>';
+            SITIO_options_str  += '<option value="GO_La_Isla_Pantanal_(1446)">GO_La_Isla_Pantanal_(1446)</option>';
+            SITIO_options_str  += '<option value="GO_La_Laguna_Sibilia_(2664)">GO_La_Laguna_Sibilia_(2664)</option>';
+            SITIO_options_str  += '<option value="GO_La_Tortuga_Peten_(2541)">GO_La_Tortuga_Peten_(2541)</option>';
+            SITIO_options_str  += '<option value="GO_La_Union_El_Rodeo_(4319)">GO_La_Union_El_Rodeo_(4319)</option>';
+            SITIO_options_str  += '<option value="GO_Las_Camelias_(1377)">GO_Las_Camelias_(1377)</option>';
+            SITIO_options_str  += '<option value="GO_Las_Majadas_Tacana_(3567)">GO_Las_Majadas_Tacana_(3567)</option>';
+            SITIO_options_str  += '<option value="GO_Llano_Coyote_(3611)">GO_Llano_Coyote_(3611)</option>';
+            SITIO_options_str  += '<option value="GO_Llano_Grande_Baja_Verapaz_(1507)">GO_Llano_Grande_Baja_Verapaz_(1507)</option>';
+            SITIO_options_str  += '<option value="GO_Macanche_(1474)">GO_Macanche_(1474)</option>';
+            SITIO_options_str  += '<option value="GO_Machaquitas_Chicleras_(4545)">GO_Machaquitas_Chicleras_(4545)</option>';
+            SITIO_options_str  += '<option value="GO_Mogotillos_(3740)">GO_Mogotillos_(3740)</option>';
+            SITIO_options_str  += '<option value="GO_Mojaca_York_(1412)">GO_Mojaca_York_(1412)</option>';
+            SITIO_options_str  += '<option value="GO_Mojarras_Santa_Amelia_(1172)">GO_Mojarras_Santa_Amelia_(1172)</option>';
+            SITIO_options_str  += '<option value="GO_Nvo_Sn_Antonio_Sija_(4348)">GO_Nvo_Sn_Antonio_Sija_(4348)</option>';
+            SITIO_options_str  += '<option value="GO_Oliveros_(4550)">GO_Oliveros_(4550)</option>';
+            SITIO_options_str  += '<option value="GO_Parcelamiento_Linares_(2536)">GO_Parcelamiento_Linares_(2536)</option>';
+            SITIO_options_str  += '<option value="GO_Pontzaj_(3484)">GO_Pontzaj_(3484)</option>';
+            SITIO_options_str  += '<option value="GO_Sacapulas-Llano_Coyote_(3552)">GO_Sacapulas-Llano_Coyote_(3552)</option>';
+            SITIO_options_str  += '<option value="GO_Sacpuy_(1353)">GO_Sacpuy_(1353)</option>';
+            SITIO_options_str  += '<option value="GO_San_Antonio_Huista_Jacal_(3416)">GO_San_Antonio_Huista_Jacal_(3416)</option>';
+            SITIO_options_str  += '<option value="GO_San_Jose_Sija_(1656)">GO_San_Jose_Sija_(1656)</option>';
+            SITIO_options_str  += '<option value="GO_San_Rafael_Independencia_(2460)">GO_San_Rafael_Independencia_(2460)</option>';
+            SITIO_options_str  += '<option value="GO_Santa_Ana_Vieja_(1352)">GO_Santa_Ana_Vieja_(1352)</option>';
+            SITIO_options_str  += '<option value="GO_Sierra_Comitancillo_(1697)">GO_Sierra_Comitancillo_(1697)</option>';
+            SITIO_options_str  += '<option value="GO_Subin_(1444)">GO_Subin_(1444)</option>';
+            SITIO_options_str  += '<option value="GO_Tanchi_(2534)">GO_Tanchi_(2534)</option>';
+            SITIO_options_str  += '<option value="GO_Tierra_Linda_Chisec_(4574)">GO_Tierra_Linda_Chisec_(4574)</option>';
+            SITIO_options_str  += '<option value="GO_Tierra_Linda_Peten_(1378)">GO_Tierra_Linda_Peten_(1378)</option>';
+            SITIO_options_str  += '<option value="GO_Tikalito_(1545)">GO_Tikalito_(1545)</option>';
+            SITIO_options_str  += '<option value="GO_Tontem_Tem_(1113)">GO_Tontem_Tem_(1113)</option>';
+            SITIO_options_str  += '<option value="GO_Virginia_(3472)">GO_Virginia_(3472)</option>';
+            SITIO_options_str  += '<option value="GRAN KARMEL XELA_XT_SBA">GRAN KARMEL XELA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="GRANADOS">GRANADOS</option>';
+            SITIO_options_str  += '<option value="GRUPO DE TIENDAS ASOCIADAS (AMATITLÁN">GRUPO DE TIENDAS ASOCIADAS (AMATITLÁN</option>';
+            SITIO_options_str  += '<option value="GUAJITOS">GUAJITOS</option>';
+            SITIO_options_str  += '<option value="GUARANJA TC">GUARANJA TC</option>';
+            SITIO_options_str  += '<option value="GUASTATOYA-EL RANCHO_XT">GUASTATOYA-EL RANCHO_XT</option>';
+            SITIO_options_str  += '<option value="GUATEBANCO ZONA 12">GUATEBANCO ZONA 12</option>';
+            SITIO_options_str  += '<option value="GUAZACAPÁN_X">GUAZACAPÁN_X</option>';
+            SITIO_options_str  += '<option value="GUAZACAPÁN_XT_SB">GUAZACAPÁN_XT_SB</option>';
+            SITIO_options_str  += '<option value="GU_Aldea_Playitas_(1486)">GU_Aldea_Playitas_(1486)</option>';
+            SITIO_options_str  += '<option value="GU_Barillas_3_(2508)">GU_Barillas_3_(2508)</option>';
+            SITIO_options_str  += '<option value="GU_La_Flor_De_La_Esperanza_(1725)">GU_La_Flor_De_La_Esperanza_(1725)</option>';
+            SITIO_options_str  += '<option value="GU_La_Laguna_(2484)">GU_La_Laguna_(2484)</option>';
+            SITIO_options_str  += '<option value="GU_La_Trinidad_(3670)">GU_La_Trinidad_(3670)</option>';
+            SITIO_options_str  += '<option value="GU_Pajaltac_(2031)">GU_Pajaltac_(2031)</option>';
+            SITIO_options_str  += '<option value="GU_Pebilpan_(2551)">GU_Pebilpan_(2551)</option>';
+            SITIO_options_str  += '<option value="GU_Purulha_2_(3717)">GU_Purulha_2_(3717)</option>';
+            SITIO_options_str  += '<option value="GU_San_Jose_Pueblo_Nuevo_(3773)">GU_San_Jose_Pueblo_Nuevo_(3773)</option>';
+            SITIO_options_str  += '<option value="Granadillo Tacana">Granadillo Tacana</option>';
+            SITIO_options_str  += '<option value="Gualá">Gualá</option>';
+            SITIO_options_str  += '<option value="GÉNOVA-FLORES COSTA CUCA_XT_SB">GÉNOVA-FLORES COSTA CUCA_XT_SB</option>';
+            SITIO_options_str  += '<option value="HACIENDA LA ESMERALDA_XT">HACIENDA LA ESMERALDA_XT</option>';
+            SITIO_options_str  += '<option value="HACIENDA REAL">HACIENDA REAL</option>';
+            SITIO_options_str  += '<option value="HANGARES ZONA 13">HANGARES ZONA 13</option>';
+            SITIO_options_str  += '<option value="HAWAI 134_XT">HAWAI 134_XT</option>';
+            SITIO_options_str  += '<option value="HAWAII">HAWAII</option>';
+            SITIO_options_str  += '<option value="HOBBITENANGO">HOBBITENANGO</option>';
+            SITIO_options_str  += '<option value="HORCONES MITA">HORCONES MITA</option>';
+            SITIO_options_str  += '<option value="HOTEL VIRGINIA">HOTEL VIRGINIA</option>';
+            SITIO_options_str  += '<option value="HUB REFORMA ZONA 09">HUB REFORMA ZONA 09</option>';
+            SITIO_options_str  += '<option value="HUEHUETENANGO CAMBOTE">HUEHUETENANGO CAMBOTE</option>';
+            SITIO_options_str  += '<option value="HUEHUETENANGO V">HUEHUETENANGO V</option>';
+            SITIO_options_str  += '<option value="HUEHUETENANGO V XT ST">HUEHUETENANGO V XT ST</option>';
+            SITIO_options_str  += '<option value="HUEHUETENANGO VIII">HUEHUETENANGO VIII</option>';
+            SITIO_options_str  += '<option value="HUEHUETENANGO ZONA 3">HUEHUETENANGO ZONA 3</option>';
+            SITIO_options_str  += '<option value="HUITAN">HUITAN</option>';
+            SITIO_options_str  += '<option value="HUITANCITO">HUITANCITO</option>';
+            SITIO_options_str  += '<option value="Hun_Nal_Ye_TC-(3792)">Hun_Nal_Ye_TC-(3792)</option>';
+            SITIO_options_str  += '<option value="INGENIO CONCEPCION">INGENIO CONCEPCION</option>';
+            SITIO_options_str  += '<option value="INGENIO LA UNION 2_XT">INGENIO LA UNION 2_XT</option>';
+            SITIO_options_str  += '<option value="INGENIO MAGDALENA - REMOTO">INGENIO MAGDALENA - REMOTO</option>';
+            SITIO_options_str  += '<option value="INGENIO PANTALEO KM84">INGENIO PANTALEO KM84</option>';
+            SITIO_options_str  += '<option value="INGENIO SANTA ANA (COW)_XT">INGENIO SANTA ANA (COW)_XT</option>';
+            SITIO_options_str  += '<option value="INTECAP CHIQUIMULA TC">INTECAP CHIQUIMULA TC</option>';
+            SITIO_options_str  += '<option value="ISLA DE FLORES II">ISLA DE FLORES II</option>';
+            SITIO_options_str  += '<option value="IXLAHUITZ">IXLAHUITZ</option>';
+            SITIO_options_str  += '<option value="IXLOCITO TC">IXLOCITO TC</option>';
+            SITIO_options_str  += '<option value="Islas_Chicales_Poste">Islas_Chicales_Poste</option>';
+            SITIO_options_str  += '<option value="Ixtahuacan Cuilco">Ixtahuacan Cuilco</option>';
+            SITIO_options_str  += '<option value="JACALTENANGO">JACALTENANGO</option>';
+            SITIO_options_str  += '<option value="JACALTENANGO CONCEPCION">JACALTENANGO CONCEPCION</option>';
+            SITIO_options_str  += '<option value="JALAPA II">JALAPA II</option>';
+            SITIO_options_str  += '<option value="JALAPA III">JALAPA III</option>';
+            SITIO_options_str  += '<option value="JALPATAGUA">JALPATAGUA</option>';
+            SITIO_options_str  += '<option value="JARDINES DE MINERVA">JARDINES DE MINERVA</option>';
+            SITIO_options_str  += '<option value="JARDINES DE VILLA SOL - POSTES REMOTOS">JARDINES DE VILLA SOL - POSTES REMOTOS</option>';
+            SITIO_options_str  += '<option value="JOBOMPICHE TC">JOBOMPICHE TC</option>';
+            SITIO_options_str  += '<option value="JOLOMTENAM-2026">JOLOMTENAM-2026</option>';
+            SITIO_options_str  += '<option value="JUAN CANO_XT_SBA">JUAN CANO_XT_SBA</option>';
+            SITIO_options_str  += '<option value="JUANA DE ARCO LIMON ZONA 18">JUANA DE ARCO LIMON ZONA 18</option>';
+            SITIO_options_str  += '<option value="JUSTO RUFINO BARRIOS II">JUSTO RUFINO BARRIOS II</option>';
+            SITIO_options_str  += '<option value="JUTIAPA X">JUTIAPA X</option>';
+            SITIO_options_str  += '<option value="Japon">Japon</option>';
+            SITIO_options_str  += '<option value="Jardines de Antigua SBA">Jardines de Antigua SBA</option>';
+            SITIO_options_str  += '<option value="Jerez_El_Asintal">Jerez_El_Asintal</option>';
+            SITIO_options_str  += '<option value="Jolomtenam">Jolomtenam</option>';
+            SITIO_options_str  += '<option value="Jubuquito">Jubuquito</option>';
+            SITIO_options_str  += '<option value="KAESER Z.13  - SECT REM_Emisoras Unidas Z">KAESER Z.13  - SECT REM_Emisoras Unidas Z</option>';
+            SITIO_options_str  += '<option value="KAMINAL JUYU 2 EEGSA_XT_EGG">KAMINAL JUYU 2 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="KANAJUYU II REMOTO EDIFICIO BADU">KANAJUYU II REMOTO EDIFICIO BADU</option>';
+            SITIO_options_str  += '<option value="KENNEDY_XT_SBA">KENNEDY_XT_SBA</option>';
+            SITIO_options_str  += '<option value="KJELL LAUGERUD EEGSA_XT">KJELL LAUGERUD EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="KM 309 HACIA TACANA TC">KM 309 HACIA TACANA TC</option>';
+            SITIO_options_str  += '<option value="KM 39.5 PALIN SBA">KM 39.5 PALIN SBA</option>';
+            SITIO_options_str  += '<option value="KM 48">KM 48</option>';
+            SITIO_options_str  += '<option value="LA CANCHA TC">LA CANCHA TC</option>';
+            SITIO_options_str  += '<option value="LA CANDELARIA_XT">LA CANDELARIA_XT</option>';
+            SITIO_options_str  += '<option value="LA CAPELLANIA">LA CAPELLANIA</option>';
+            SITIO_options_str  += '<option value="LA CEIBA PALIN_XT_SBA">LA CEIBA PALIN_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LA COMUNIDAD GUISASOLA">LA COMUNIDAD GUISASOLA</option>';
+            SITIO_options_str  += '<option value="LA CONCEPCION PALENCIA">LA CONCEPCION PALENCIA</option>';
+            SITIO_options_str  += '<option value="LA CRUZ SANARATE POSTE">LA CRUZ SANARATE POSTE</option>';
+            SITIO_options_str  += '<option value="LA CUMBRE BAJA VERAPAZ_XT">LA CUMBRE BAJA VERAPAZ_XT</option>';
+            SITIO_options_str  += '<option value="LA DIAGONAL PATZICIA">LA DIAGONAL PATZICIA</option>';
+            SITIO_options_str  += '<option value="LA ESPERANZA IXCAN TC">LA ESPERANZA IXCAN TC</option>';
+            SITIO_options_str  += '<option value="LA FEDERACION">LA FEDERACION</option>';
+            SITIO_options_str  += '<option value="LA FORTUNA MENTON">LA FORTUNA MENTON</option>';
+            SITIO_options_str  += '<option value="LA FRAGUA TC">LA FRAGUA TC</option>';
+            SITIO_options_str  += '<option value="LA FRAGUA ZACAPA_XT_SBA">LA FRAGUA ZACAPA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LA FRATERNIDAD_XT">LA FRATERNIDAD_XT</option>';
+            SITIO_options_str  += '<option value="LA GOMERA 2_XT_PHX">LA GOMERA 2_XT_PHX</option>';
+            SITIO_options_str  += '<option value="LA GOMERA 3_XT_PHX">LA GOMERA 3_XT_PHX</option>';
+            SITIO_options_str  += '<option value="LA GRANDEZA TC">LA GRANDEZA TC</option>';
+            SITIO_options_str  += '<option value="LA JOYA DE CONACASTE POSTE">LA JOYA DE CONACASTE POSTE</option>';
+            SITIO_options_str  += '<option value="LA LADRILLERA_XT_TC">LA LADRILLERA_XT_TC</option>';
+            SITIO_options_str  += '<option value="LA LAGUNA BAJA VERAPAZ EXP">LA LAGUNA BAJA VERAPAZ EXP</option>';
+            SITIO_options_str  += '<option value="LA LIBERTAD">LA LIBERTAD</option>';
+            SITIO_options_str  += '<option value="LA LIBERTAD HUEHUE">LA LIBERTAD HUEHUE</option>';
+            SITIO_options_str  += '<option value="LA MARIPOSA 2 EEGSA_XT_EGG">LA MARIPOSA 2 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="LA MISION ZONA 10">LA MISION ZONA 10</option>';
+            SITIO_options_str  += '<option value="LA MONTANA MALACATAN XT ST">LA MONTANA MALACATAN XT ST</option>';
+            SITIO_options_str  += '<option value="LA MONTANA REU">LA MONTANA REU</option>';
+            SITIO_options_str  += '<option value="LA MONTAÑITA SANSARE T">LA MONTAÑITA SANSARE T</option>';
+            SITIO_options_str  += '<option value="LA PALMA RIO HONDO_XT">LA PALMA RIO HONDO_XT</option>';
+            SITIO_options_str  += '<option value="LA PALMILLA CERRO TC">LA PALMILLA CERRO TC</option>';
+            SITIO_options_str  += '<option value="LA PALMILLA GUALAN">LA PALMILLA GUALAN</option>';
+            SITIO_options_str  += '<option value="LA PAZ GÉNOVA_XT_SB">LA PAZ GÉNOVA_XT_SB</option>';
+            SITIO_options_str  += '<option value="LA PERIQUERA PALIN_XT_SBA">LA PERIQUERA PALIN_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LA PIEDAD CHIPO">LA PIEDAD CHIPO</option>';
+            SITIO_options_str  += '<option value="LA PLAZUELA">LA PLAZUELA</option>';
+            SITIO_options_str  += '<option value="LA ROTONDA HUEHUETENANGO">LA ROTONDA HUEHUETENANGO</option>';
+            SITIO_options_str  += '<option value="LA SIERRA">LA SIERRA</option>';
+            SITIO_options_str  += '<option value="LA TRINIDAD COATEPEQUE">LA TRINIDAD COATEPEQUE</option>';
+            SITIO_options_str  += '<option value="LA UNION COATEPEQUE PUEBLO_XT_PHX">LA UNION COATEPEQUE PUEBLO_XT_PHX</option>';
+            SITIO_options_str  += '<option value="LA VEGA CHIMALTENANGO">LA VEGA CHIMALTENANGO</option>';
+            SITIO_options_str  += '<option value="LABOR SAN JOSE">LABOR SAN JOSE</option>';
+            SITIO_options_str  += '<option value="LABOR SAN JOSE_2026">LABOR SAN JOSE_2026</option>';
+            SITIO_options_str  += '<option value="LAGUNA SECA AMATITLAN TC">LAGUNA SECA AMATITLAN TC</option>';
+            SITIO_options_str  += '<option value="LANQUIN II">LANQUIN II</option>';
+            SITIO_options_str  += '<option value="LAS BRISAS MIXCO">LAS BRISAS MIXCO</option>';
+            SITIO_options_str  += '<option value="LAS CHARCAS - CENTRO ESCOLAR LA VILLA NO. 2">LAS CHARCAS - CENTRO ESCOLAR LA VILLA NO. 2</option>';
+            SITIO_options_str  += '<option value="LAS CIENAGAS">LAS CIENAGAS</option>';
+            SITIO_options_str  += '<option value="LAS CRUCES ESCUINTLA">LAS CRUCES ESCUINTLA</option>';
+            SITIO_options_str  += '<option value="LAS CRUCES SAN BERNARDINO_TC">LAS CRUCES SAN BERNARDINO_TC</option>';
+            SITIO_options_str  += '<option value="LAS CRUCES SUCHI">LAS CRUCES SUCHI</option>';
+            SITIO_options_str  += '<option value="LAS CUMBRES">LAS CUMBRES</option>';
+            SITIO_options_str  += '<option value="LAS ESCOBAS LLANO DE LA NEGRA">LAS ESCOBAS LLANO DE LA NEGRA</option>';
+            SITIO_options_str  += '<option value="LAS FLORES C">LAS FLORES C</option>';
+            SITIO_options_str  += '<option value="LAS FLORES MAZATENANGO">LAS FLORES MAZATENANGO</option>';
+            SITIO_options_str  += '<option value="LAS FLORES MAZATENANGO EXP">LAS FLORES MAZATENANGO EXP</option>';
+            SITIO_options_str  += '<option value="LAS FLORES XELA">LAS FLORES XELA</option>';
+            SITIO_options_str  += '<option value="LAS GUACAMAYAS HUEHUETENANGO">LAS GUACAMAYAS HUEHUETENANGO</option>';
+            SITIO_options_str  += '<option value="LAS ILUSIONES (GUA067)_XT">LAS ILUSIONES (GUA067)_XT</option>';
+            SITIO_options_str  += '<option value="LAS LAGUNAS SNM2">LAS LAGUNAS SNM2</option>';
+            SITIO_options_str  += '<option value="LAS LAGUNAS TC">LAS LAGUNAS TC</option>';
+            SITIO_options_str  += '<option value="LAS LOMAS MOYUTA">LAS LOMAS MOYUTA</option>';
+            SITIO_options_str  += '<option value="LAS LOMITAS_XT">LAS LOMITAS_XT</option>';
+            SITIO_options_str  += '<option value="LAS LUCES">LAS LUCES</option>';
+            SITIO_options_str  += '<option value="LAS LUCES XT ST">LAS LUCES XT ST</option>';
+            SITIO_options_str  += '<option value="LAS MANZANILLAS">LAS MANZANILLAS</option>';
+            SITIO_options_str  += '<option value="LAS MARGARITAS MALACATAN">LAS MARGARITAS MALACATAN</option>';
+            SITIO_options_str  += '<option value="LAS MARGARITAS SAN MARCOS">LAS MARGARITAS SAN MARCOS</option>';
+            SITIO_options_str  += '<option value="LAS PALMAS PETAPA">LAS PALMAS PETAPA</option>';
+            SITIO_options_str  += '<option value="LAS PILAS 2 REU">LAS PILAS 2 REU</option>';
+            SITIO_options_str  += '<option value="LAS PLAYAS SANTA LUCIA TC">LAS PLAYAS SANTA LUCIA TC</option>';
+            SITIO_options_str  += '<option value="LAS POZAS RÍO HONDO_XT_SB">LAS POZAS RÍO HONDO_XT_SB</option>';
+            SITIO_options_str  += '<option value="LAS ROSAS QUICHE">LAS ROSAS QUICHE</option>';
+            SITIO_options_str  += '<option value="LAS TRANCAS JUTIAPA_XT_SBA">LAS TRANCAS JUTIAPA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LAS VARITAS SUCHI">LAS VARITAS SUCHI</option>';
+            SITIO_options_str  += '<option value="LAS YARDAS A5-A7">LAS YARDAS A5-A7</option>';
+            SITIO_options_str  += '<option value="LAURELES EL EDEN TC">LAURELES EL EDEN TC</option>';
+            SITIO_options_str  += '<option value="LILILA">LILILA</option>';
+            SITIO_options_str  += '<option value="LINDA VISTA">LINDA VISTA</option>';
+            SITIO_options_str  += '<option value="LIRIOS DE CAYALA">LIRIOS DE CAYALA</option>';
+            SITIO_options_str  += '<option value="LIVINGSTON">LIVINGSTON</option>';
+            SITIO_options_str  += '<option value="LLANO DE CHINCHILLA_XT_SBA">LLANO DE CHINCHILLA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LLANO DE PIEDRAS">LLANO DE PIEDRAS</option>';
+            SITIO_options_str  += '<option value="LLANO GRANDE">LLANO GRANDE</option>';
+            SITIO_options_str  += '<option value="LLANO GRANDE QUICH�">LLANO GRANDE QUICH�</option>';
+            SITIO_options_str  += '<option value="LLANO GRANDE SANTA ROSA">LLANO GRANDE SANTA ROSA</option>';
+            SITIO_options_str  += '<option value="LO DE FUENTES">LO DE FUENTES</option>';
+            SITIO_options_str  += '<option value="LO DE GOMEZ TC">LO DE GOMEZ TC</option>';
+            SITIO_options_str  += '<option value="LO DE RODRIGUEZ 2">LO DE RODRIGUEZ 2</option>';
+            SITIO_options_str  += '<option value="LO PIRIR">LO PIRIR</option>';
+            SITIO_options_str  += '<option value="LOMA BLANCA GUATEMALA">LOMA BLANCA GUATEMALA</option>';
+            SITIO_options_str  += '<option value="LOMA DE LA CRUZ SALCAJA_XT">LOMA DE LA CRUZ SALCAJA_XT</option>';
+            SITIO_options_str  += '<option value="LOMAS DE PORTUGAL_SAO">LOMAS DE PORTUGAL_SAO</option>';
+            SITIO_options_str  += '<option value="LOS ACHIOTES GUISCOYOL TC">LOS ACHIOTES GUISCOYOL TC</option>';
+            SITIO_options_str  += '<option value="LOS AMATES">LOS AMATES</option>';
+            SITIO_options_str  += '<option value="LOS ARCOS QUETZALTENANGO">LOS ARCOS QUETZALTENANGO</option>';
+            SITIO_options_str  += '<option value="LOS CEDROS ZONA 12 EEGSA_XT_EGG">LOS CEDROS ZONA 12 EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="LOS CERRITOS">LOS CERRITOS</option>';
+            SITIO_options_str  += '<option value="LOS CERRITOS SALAMA">LOS CERRITOS SALAMA</option>';
+            SITIO_options_str  += '<option value="LOS CHATOS ESCUINTLA">LOS CHATOS ESCUINTLA</option>';
+            SITIO_options_str  += '<option value="LOS CIMIENTOS_XT_SBA">LOS CIMIENTOS_XT_SBA</option>';
+            SITIO_options_str  += '<option value="LOS ENCUENTROS">LOS ENCUENTROS</option>';
+            SITIO_options_str  += '<option value="LOS GIRASOLES_XT">LOS GIRASOLES_XT</option>';
+            SITIO_options_str  += '<option value="LOS HATILLOS SANTA ROSA">LOS HATILLOS SANTA ROSA</option>';
+            SITIO_options_str  += '<option value="LOS OLIVOS">LOS OLIVOS</option>';
+            SITIO_options_str  += '<option value="LOS OLIVOS 2026">LOS OLIVOS 2026</option>';
+            SITIO_options_str  += '<option value="LOS OLIVOS BARCENAS V.N.">LOS OLIVOS BARCENAS V.N.</option>';
+            SITIO_options_str  += '<option value="LOS OLIVOS II">LOS OLIVOS II</option>';
+            SITIO_options_str  += '<option value="LOS PIPILES">LOS PIPILES</option>';
+            SITIO_options_str  += '<option value="LOS SAPITOS">LOS SAPITOS</option>';
+            SITIO_options_str  += '<option value="LOS SAUCES AMATITLAN">LOS SAUCES AMATITLAN</option>';
+            SITIO_options_str  += '<option value="LOTIFICACION EL HOR EEGSA_XT">LOTIFICACION EL HOR EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="LUISIANA-MALACATÁN_XT_SB">LUISIANA-MALACATÁN_XT_SB</option>';
+            SITIO_options_str  += '<option value="LUMINARIA PERONIA II">LUMINARIA PERONIA II</option>';
+            SITIO_options_str  += '<option value="La Industria">La Industria</option>';
+            SITIO_options_str  += '<option value="La Soledad San Lorenzo TC">La Soledad San Lorenzo TC</option>';
+            SITIO_options_str  += '<option value="La Soledad TC">La Soledad TC</option>';
+            SITIO_options_str  += '<option value="La_Esperanza_San_Martin_Jilotepeque(4292)">La_Esperanza_San_Martin_Jilotepeque(4292)</option>';
+            SITIO_options_str  += '<option value="La_Gabita">La_Gabita</option>';
+            SITIO_options_str  += '<option value="La_Paz_Poste">La_Paz_Poste</option>';
+            SITIO_options_str  += '<option value="Las Anonas Jutiapa">Las Anonas Jutiapa</option>';
+            SITIO_options_str  += '<option value="Las Cruces">Las Cruces</option>';
+            SITIO_options_str  += '<option value="Las Lomas Chimaltenango">Las Lomas Chimaltenango</option>';
+            SITIO_options_str  += '<option value="Libertad Escuintla">Libertad Escuintla</option>';
+            SITIO_options_str  += '<option value="Longarone II">Longarone II</option>';
+            SITIO_options_str  += '<option value="Los Cerrotes TC">Los Cerrotes TC</option>';
+            SITIO_options_str  += '<option value="Los Pocitos Chuatuj">Los Pocitos Chuatuj</option>';
+            SITIO_options_str  += '<option value="Los_Gonzales_TC(4158)">Los_Gonzales_TC(4158)</option>';
+            SITIO_options_str  += '<option value="MACTZUL II">MACTZUL II</option>';
+            SITIO_options_str  += '<option value="MADRE DORMIDA_XT">MADRE DORMIDA_XT</option>';
+            SITIO_options_str  += '<option value="MADRE VIEJA A 18 TC">MADRE VIEJA A 18 TC</option>';
+            SITIO_options_str  += '<option value="MAGDALENA">MAGDALENA</option>';
+            SITIO_options_str  += '<option value="MAGNOLIAS 2_XT_TBS">MAGNOLIAS 2_XT_TBS</option>';
+            SITIO_options_str  += '<option value="MALACATAN II">MALACATAN II</option>';
+            SITIO_options_str  += '<option value="MALACATANCITO II">MALACATANCITO II</option>';
+            SITIO_options_str  += '<option value="MALACATANCITO_XT_TC">MALACATANCITO_XT_TC</option>';
+            SITIO_options_str  += '<option value="MANANTIALES COSTA CUCA">MANANTIALES COSTA CUCA</option>';
+            SITIO_options_str  += '<option value="MANOS UNIDAS TC">MANOS UNIDAS TC</option>';
+            SITIO_options_str  += '<option value="MARAJUMA_XT">MARAJUMA_XT</option>';
+            SITIO_options_str  += '<option value="MARAXCO_XT_TR">MARAXCO_XT_TR</option>';
+            SITIO_options_str  += '<option value="MARGARITAS DEL ROSARIO">MARGARITAS DEL ROSARIO</option>';
+            SITIO_options_str  += '<option value="MARIA LINDA">MARIA LINDA</option>';
+            SITIO_options_str  += '<option value="MARISCAL TC">MARISCAL TC</option>';
+            SITIO_options_str  += '<option value="MASAGUA">MASAGUA</option>';
+            SITIO_options_str  += '<option value="MASAGUA PUEBLO_XT_TC">MASAGUA PUEBLO_XT_TC</option>';
+            SITIO_options_str  += '<option value="MATANZAS_XT">MATANZAS_XT</option>';
+            SITIO_options_str  += '<option value="MATASANO BOCA DEL MONTE II">MATASANO BOCA DEL MONTE II</option>';
+            SITIO_options_str  += '<option value="MAZATENANGO 6ta AV">MAZATENANGO 6ta AV</option>';
+            SITIO_options_str  += '<option value="MEGA FRATER CARRETERA">MEGA FRATER CARRETERA</option>';
+            SITIO_options_str  += '<option value="MELONAR REPETIDOR">MELONAR REPETIDOR</option>';
+            SITIO_options_str  += '<option value="MENCHU QUACQUIX">MENCHU QUACQUIX</option>';
+            SITIO_options_str  += '<option value="MERCADO CENTRAL">MERCADO CENTRAL</option>';
+            SITIO_options_str  += '<option value="MERCADO PANAJACHEL">MERCADO PANAJACHEL</option>';
+            SITIO_options_str  += '<option value="MERCADO SOLOL�">MERCADO SOLOL�</option>';
+            SITIO_options_str  += '<option value="MINISTERIO DE GOBERNACION">MINISTERIO DE GOBERNACION</option>';
+            SITIO_options_str  += '<option value="MINISTERIO PUBLICO">MINISTERIO PUBLICO</option>';
+            SITIO_options_str  += '<option value="MIRAFLORES OUTDOOR II">MIRAFLORES OUTDOOR II</option>';
+            SITIO_options_str  += '<option value="MOJARRAS SANTA AMELIA">MOJARRAS SANTA AMELIA</option>';
+            SITIO_options_str  += '<option value="MOLINOS MODERNOS Z 12_XT">MOLINOS MODERNOS Z 12_XT</option>';
+            SITIO_options_str  += '<option value="MONTE CRISTO">MONTE CRISTO</option>';
+            SITIO_options_str  += '<option value="MONTE DE LOS OLIVOS SBA">MONTE DE LOS OLIVOS SBA</option>';
+            SITIO_options_str  += '<option value="MONTE GRANDE TC">MONTE GRANDE TC</option>';
+            SITIO_options_str  += '<option value="MONTE MARIA">MONTE MARIA</option>';
+            SITIO_options_str  += '<option value="MONTE REAL III">MONTE REAL III</option>';
+            SITIO_options_str  += '<option value="MONTE REDONDO_XT_TC">MONTE REDONDO_XT_TC</option>';
+            SITIO_options_str  += '<option value="MONTERRICO 2_XT">MONTERRICO 2_XT</option>';
+            SITIO_options_str  += '<option value="MONTESANO EEGSA_XT_EGG">MONTESANO EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="MORALES III">MORALES III</option>';
+            SITIO_options_str  += '<option value="MORALES IZABAL">MORALES IZABAL</option>';
+            SITIO_options_str  += '<option value="MORAZÁN_X">MORAZÁN_X</option>';
+            SITIO_options_str  += '<option value="MOYUTA">MOYUTA</option>';
+            SITIO_options_str  += '<option value="MUXBAL POSTE">MUXBAL POSTE</option>';
+            SITIO_options_str  += '<option value="Marina del Sur (Juan Gaviota)">Marina del Sur (Juan Gaviota)</option>';
+            SITIO_options_str  += '<option value="Mariscal Zavala">Mariscal Zavala</option>';
+            SITIO_options_str  += '<option value="Miralbosque TC">Miralbosque TC</option>';
+            SITIO_options_str  += '<option value="Monzon Camino Valle Nuevo">Monzon Camino Valle Nuevo</option>';
+            SITIO_options_str  += '<option value="NAHUALÁ NORTE TC_XT_T">NAHUALÁ NORTE TC_XT_T</option>';
+            SITIO_options_str  += '<option value="NAVAJOA-2026">NAVAJOA-2026</option>';
+            SITIO_options_str  += '<option value="NEBAJ XT REMOTO TEMPORAL">NEBAJ XT REMOTO TEMPORAL</option>';
+            SITIO_options_str  += '<option value="NEBAJ XT REMOTO TEMPORAL 2">NEBAJ XT REMOTO TEMPORAL 2</option>';
+            SITIO_options_str  += '<option value="NENTON">NENTON</option>';
+            SITIO_options_str  += '<option value="NIMAJUYU">NIMAJUYU</option>';
+            SITIO_options_str  += '<option value="NUEVA TEXCUACO_XT">NUEVA TEXCUACO_XT</option>';
+            SITIO_options_str  += '<option value="NUEVO PALMAR C (5888)">NUEVO PALMAR C (5888)</option>';
+            SITIO_options_str  += '<option value="NUEVO PARAISO IXCAN TC">NUEVO PARAISO IXCAN TC</option>';
+            SITIO_options_str  += '<option value="NUEVO PROGRESO SAN MARCOS">NUEVO PROGRESO SAN MARCOS</option>';
+            SITIO_options_str  += '<option value="NUEVO PROGRESO_XT_SBA">NUEVO PROGRESO_XT_SBA</option>';
+            SITIO_options_str  += '<option value="Naranjo Guastatoya">Naranjo Guastatoya</option>';
+            SITIO_options_str  += '<option value="Nuevo_Cajola_Reu">Nuevo_Cajola_Reu</option>';
+            SITIO_options_str  += '<option value="OAKLAND MALL SOTANO">OAKLAND MALL SOTANO</option>';
+            SITIO_options_str  += '<option value="OAKLAND MALL SOTANO - traslado Zara">OAKLAND MALL SOTANO - traslado Zara</option>';
+            SITIO_options_str  += '<option value="OBRAJE SAN ESTEBAN">OBRAJE SAN ESTEBAN</option>';
+            SITIO_options_str  += '<option value="OCANTE">OCANTE</option>';
+            SITIO_options_str  += '<option value="OFICINAS CAMPERO">OFICINAS CAMPERO</option>';
+            SITIO_options_str  += '<option value="OLINTEPEQUE">OLINTEPEQUE</option>';
+            SITIO_options_str  += '<option value="ORATORIO II">ORATORIO II</option>';
+            SITIO_options_str  += '<option value="Oratorio_Chimaltenango">Oratorio_Chimaltenango</option>';
+            SITIO_options_str  += '<option value="PACAJA LA INDEPENDENCIA">PACAJA LA INDEPENDENCIA</option>';
+            SITIO_options_str  += '<option value="PACAYA COATEPEQUE">PACAYA COATEPEQUE</option>';
+            SITIO_options_str  += '<option value="PACULAM_XT_TR">PACULAM_XT_TR</option>';
+            SITIO_options_str  += '<option value="PALAMA">PALAMA</option>';
+            SITIO_options_str  += '<option value="PALESTINA DE LOS ALTOS">PALESTINA DE LOS ALTOS</option>';
+            SITIO_options_str  += '<option value="PALEY">PALEY</option>';
+            SITIO_options_str  += '<option value="PALIN AMATITLAN">PALIN AMATITLAN</option>';
+            SITIO_options_str  += '<option value="PALINCHE">PALINCHE</option>';
+            SITIO_options_str  += '<option value="PALO GORDO">PALO GORDO</option>';
+            SITIO_options_str  += '<option value="PALO VERDE TC">PALO VERDE TC</option>';
+            SITIO_options_str  += '<option value="PAMPLONA_XT">PAMPLONA_XT</option>';
+            SITIO_options_str  += '<option value="PANABAJAL">PANABAJAL</option>';
+            SITIO_options_str  += '<option value="PANAJACHEL 2 _XT">PANAJACHEL 2 _XT</option>';
+            SITIO_options_str  += '<option value="PANAJACHEL EMBARCADERO TEMPORAL">PANAJACHEL EMBARCADERO TEMPORAL</option>';
+            SITIO_options_str  += '<option value="PANAJACHEL VI">PANAJACHEL VI</option>';
+            SITIO_options_str  += '<option value="PANAJXIT">PANAJXIT</option>';
+            SITIO_options_str  += '<option value="PANLA">PANLA</option>';
+            SITIO_options_str  += '<option value="PANORAMICAS DEL ATLANTICO">PANORAMICAS DEL ATLANTICO</option>';
+            SITIO_options_str  += '<option value="PAQUILA">PAQUILA</option>';
+            SITIO_options_str  += '<option value="PAQUIX">PAQUIX</option>';
+            SITIO_options_str  += '<option value="PARCELAMIENTO EL NARANJO">PARCELAMIENTO EL NARANJO</option>';
+            SITIO_options_str  += '<option value="PARCELAMIENTO SANTA ANA">PARCELAMIENTO SANTA ANA</option>';
+            SITIO_options_str  += '<option value="PARCELAMIENTO SANTA FÉ_X">PARCELAMIENTO SANTA FÉ_X</option>';
+            SITIO_options_str  += '<option value="PARQUE DE LA INDUSTRIA">PARQUE DE LA INDUSTRIA</option>';
+            SITIO_options_str  += '<option value="PARQUE DE LA INDUSTRIA - LEMANS EASY MACRO">PARQUE DE LA INDUSTRIA - LEMANS EASY MACRO</option>';
+            SITIO_options_str  += '<option value="PARQUE INDUSTRIAL Z C">PARQUE INDUSTRIAL Z C</option>';
+            SITIO_options_str  += '<option value="PARQUE INDUSTRIAL Z C_2026">PARQUE INDUSTRIAL Z C_2026</option>';
+            SITIO_options_str  += '<option value="PASACO">PASACO</option>';
+            SITIO_options_str  += '<option value="PASAJE ENRIQUEZ SBA">PASAJE ENRIQUEZ SBA</option>';
+            SITIO_options_str  += '<option value="PATACHAJ II">PATACHAJ II</option>';
+            SITIO_options_str  += '<option value="PATULUL">PATULUL</option>';
+            SITIO_options_str  += '<option value="PATULUL II XT ST">PATULUL II XT ST</option>';
+            SITIO_options_str  += '<option value="PATUT">PATUT</option>';
+            SITIO_options_str  += '<option value="PATZICIA CARRETERA_XT_TR">PATZICIA CARRETERA_XT_TR</option>';
+            SITIO_options_str  += '<option value="PATZICIA XT">PATZICIA XT</option>';
+            SITIO_options_str  += '<option value="PATZUN">PATZUN</option>';
+            SITIO_options_str  += '<option value="PATZUN XT">PATZUN XT</option>';
+            SITIO_options_str  += '<option value="PELETERIA VELTZ QUETZALTENANGO">PELETERIA VELTZ QUETZALTENANGO</option>';
+            SITIO_options_str  += '<option value="PEPSICO Remoto Jutiapa">PEPSICO Remoto Jutiapa</option>';
+            SITIO_options_str  += '<option value="PERIFERICO XELA NORTE">PERIFERICO XELA NORTE</option>';
+            SITIO_options_str  += '<option value="PETENTA">PETENTA</option>';
+            SITIO_options_str  += '<option value="PEÑON DE SAN ANGE">PEÑON DE SAN ANGE</option>';
+            SITIO_options_str  += '<option value="PIEDRA DE CAL (PRO721)">PIEDRA DE CAL (PRO721)</option>';
+            SITIO_options_str  += '<option value="PIEDRA GRANDE">PIEDRA GRANDE</option>';
+            SITIO_options_str  += '<option value="PIEDRA PARADA JOCOTAN TC">PIEDRA PARADA JOCOTAN TC</option>';
+            SITIO_options_str  += '<option value="PIEDRA PARTIDA">PIEDRA PARTIDA</option>';
+            SITIO_options_str  += '<option value="PIEDRAS AZULES">PIEDRAS AZULES</option>';
+            SITIO_options_str  += '<option value="PILAR UNO SAN JUAN SAC">PILAR UNO SAN JUAN SAC</option>';
+            SITIO_options_str  += '<option value="PIXABAJ TC">PIXABAJ TC</option>';
+            SITIO_options_str  += '<option value="PLAN GRANDE">PLAN GRANDE</option>';
+            SITIO_options_str  += '<option value="PLAN GRANDE TC">PLAN GRANDE TC</option>';
+            SITIO_options_str  += '<option value="PLAN LA LIMA">PLAN LA LIMA</option>';
+            SITIO_options_str  += '<option value="PLANES DE BARCENAS REMOTO -  ICTA VILLA NUEVA">PLANES DE BARCENAS REMOTO -  ICTA VILLA NUEVA</option>';
+            SITIO_options_str  += '<option value="PLANTA SAN MIGUEL CEMENTOS PROGRESO">PLANTA SAN MIGUEL CEMENTOS PROGRESO</option>';
+            SITIO_options_str  += '<option value="PLATANARES LA ZARCA">PLATANARES LA ZARCA</option>';
+            SITIO_options_str  += '<option value="PLAZA DEL SOL">PLAZA DEL SOL</option>';
+            SITIO_options_str  += '<option value="PLAZA MANANTIAL EEGSA_XT_EGG">PLAZA MANANTIAL EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="PLAZA PALMERAS ESCUINTLA XT ST">PLAZA PALMERAS ESCUINTLA XT ST</option>';
+            SITIO_options_str  += '<option value="PLAZA PRIMAVERA_EGG">PLAZA PRIMAVERA_EGG</option>';
+            SITIO_options_str  += '<option value="POCHUTA">POCHUTA</option>';
+            SITIO_options_str  += '<option value="POLOGUA (TOT254)">POLOGUA (TOT254)</option>';
+            SITIO_options_str  += '<option value="POLOGUÁ PUEBLO_X">POLOGUÁ PUEBLO_X</option>';
+            SITIO_options_str  += '<option value="PORTALES">PORTALES</option>';
+            SITIO_options_str  += '<option value="PORTUARIA QUETZAL_XT">PORTUARIA QUETZAL_XT</option>';
+            SITIO_options_str  += '<option value="PORTUARIA QUETZAL_XT 2026_A">PORTUARIA QUETZAL_XT 2026_A</option>';
+            SITIO_options_str  += '<option value="POSTE BUCARO MEZQUITAL">POSTE BUCARO MEZQUITAL</option>';
+            SITIO_options_str  += '<option value="POSTE CALZADA ARZU 1">POSTE CALZADA ARZU 1</option>';
+            SITIO_options_str  += '<option value="POSTE COBAN C">POSTE COBAN C</option>';
+            SITIO_options_str  += '<option value="POSTE COBAN F">POSTE COBAN F</option>';
+            SITIO_options_str  += '<option value="POSTE COBAN I">POSTE COBAN I</option>';
+            SITIO_options_str  += '<option value="POSTE MARIANITAS VILLA NUEVA_EEG">POSTE MARIANITAS VILLA NUEVA_EEG</option>';
+            SITIO_options_str  += '<option value="POSTE MEZQUITAL III">POSTE MEZQUITAL III</option>';
+            SITIO_options_str  += '<option value="POSTE MEZQUITAL III_EEG">POSTE MEZQUITAL III_EEG</option>';
+            SITIO_options_str  += '<option value="PRADERA CHIMALTENANGO_XT">PRADERA CHIMALTENANGO_XT</option>';
+            SITIO_options_str  += '<option value="PRADOS DE NIMAJUYU_XT_TC">PRADOS DE NIMAJUYU_XT_TC</option>';
+            SITIO_options_str  += '<option value="PRADOS DE VILLA HERMOSA 2">PRADOS DE VILLA HERMOSA 2</option>';
+            SITIO_options_str  += '<option value="PRADOS DE VILLAHERMOSA_XT_SBA">PRADOS DE VILLAHERMOSA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="PRADOS DEL TABACAL BILLBOARD">PRADOS DEL TABACAL BILLBOARD</option>';
+            SITIO_options_str  += '<option value="PROGRESO JUTIAPA TC">PROGRESO JUTIAPA TC</option>';
+            SITIO_options_str  += '<option value="PROVEEDORA DE SERVICIO SE TC">PROVEEDORA DE SERVICIO SE TC</option>';
+            SITIO_options_str  += '<option value="PROYECTOS Z6">PROYECTOS Z6</option>';
+            SITIO_options_str  += '<option value="PUEBLO VIEJO SAN SEBASTIAN TC">PUEBLO VIEJO SAN SEBASTIAN TC</option>';
+            SITIO_options_str  += '<option value="PUENTE VIEJO JUTIAPA">PUENTE VIEJO JUTIAPA</option>';
+            SITIO_options_str  += '<option value="PUERTO BARRIOS II">PUERTO BARRIOS II</option>';
+            SITIO_options_str  += '<option value="PUERTO BARRIOS VI">PUERTO BARRIOS VI</option>';
+            SITIO_options_str  += '<option value="PUERTO IZTAPA">PUERTO IZTAPA</option>';
+            SITIO_options_str  += '<option value="PUERTO SAN JOSE_XT_SBA">PUERTO SAN JOSE_XT_SBA</option>';
+            SITIO_options_str  += '<option value="Pachay">Pachay</option>';
+            SITIO_options_str  += '<option value="Pachichiac">Pachichiac</option>';
+            SITIO_options_str  += '<option value="Pachimulin TC">Pachimulin TC</option>';
+            SITIO_options_str  += '<option value="Pachimulin TC_2026">Pachimulin TC_2026</option>';
+            SITIO_options_str  += '<option value="Pajapa RC TC">Pajapa RC TC</option>';
+            SITIO_options_str  += '<option value="Panyevar TC">Panyevar TC</option>';
+            SITIO_options_str  += '<option value="Patoquer">Patoquer</option>';
+            SITIO_options_str  += '<option value="Poste zona 9">Poste zona 9</option>';
+            SITIO_options_str  += '<option value="QUEZALTEPEQUE">QUEZALTEPEQUE</option>';
+            SITIO_options_str  += '<option value="QUICHE CERRO TC">QUICHE CERRO TC</option>';
+            SITIO_options_str  += '<option value="QUICHE III">QUICHE III</option>';
+            SITIO_options_str  += '<option value="QUICHE ZONA 4 2AV">QUICHE ZONA 4 2AV</option>';
+            SITIO_options_str  += '<option value="QUINTAS LAS VICTORIAS C">QUINTAS LAS VICTORIAS C</option>';
+            SITIO_options_str  += '<option value="Quexlemuj">Quexlemuj</option>';
+            SITIO_options_str  += '<option value="RAFAEL LANDIVAR">RAFAEL LANDIVAR</option>';
+            SITIO_options_str  += '<option value="RANCHO DE TEJA TOTO">RANCHO DE TEJA TOTO</option>';
+            SITIO_options_str  += '<option value="RANCHO LUCAS">RANCHO LUCAS</option>';
+            SITIO_options_str  += '<option value="REMOTO CIRCUS PIZZA">REMOTO CIRCUS PIZZA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CACALOTEPEQUE">REPETIDOR CACALOTEPEQUE</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CERRO ALUX T2 (GUA702)">REPETIDOR CERRO ALUX T2 (GUA702)</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CERRO LA PIPA">REPETIDOR CERRO LA PIPA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CERRO QUEZALTEPEQUE (CHQ176/CHQ723)">REPETIDOR CERRO QUEZALTEPEQUE (CHQ176/CHQ723)</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CHICUT T2 (AVP136)">REPETIDOR CHICUT T2 (AVP136)</option>';
+            SITIO_options_str  += '<option value="REPETIDOR CHUYA">REPETIDOR CHUYA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR EL CRUZADERO">REPETIDOR EL CRUZADERO</option>';
+            SITIO_options_str  += '<option value="REPETIDOR EL DURAZNO T2 (BVP165/722)">REPETIDOR EL DURAZNO T2 (BVP165/722)</option>';
+            SITIO_options_str  += '<option value="REPETIDOR IXCHIGUAN">REPETIDOR IXCHIGUAN</option>';
+            SITIO_options_str  += '<option value="REPETIDOR LA CONSULTA T2 (SRS712)">REPETIDOR LA CONSULTA T2 (SRS712)</option>';
+            SITIO_options_str  += '<option value="REPETIDOR LA MESILLA">REPETIDOR LA MESILLA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR LIANSTAR - FINCA COLOMBITA">REPETIDOR LIANSTAR - FINCA COLOMBITA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR LOMA DE PIEDRA">REPETIDOR LOMA DE PIEDRA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR SANTA INES">REPETIDOR SANTA INES</option>';
+            SITIO_options_str  += '<option value="REPETIDOR SOLOMA">REPETIDOR SOLOMA</option>';
+            SITIO_options_str  += '<option value="REPETIDOR TUISOX  (COLOLAJ">REPETIDOR TUISOX  (COLOLAJ</option>';
+            SITIO_options_str  += '<option value="REPETIDOR TZUJIL">REPETIDOR TZUJIL</option>';
+            SITIO_options_str  += '<option value="REPETIDOR YUPILTEPEQUE (JUT714)">REPETIDOR YUPILTEPEQUE (JUT714)</option>';
+            SITIO_options_str  += '<option value="RESIDENCIAL HACIENDA REAL TC">RESIDENCIAL HACIENDA REAL TC</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES ACATA VILLA NUEVA">RESIDENCIALES ACATA VILLA NUEVA</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES ATLANTIDA">RESIDENCIALES ATLANTIDA</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES CASA GRANDE">RESIDENCIALES CASA GRANDE</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES LOS ARCOS SAN MIGUEL PETAPA XT SBA">RESIDENCIALES LOS ARCOS SAN MIGUEL PETAPA XT SBA</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES PRIMAVERA ZONA 11">RESIDENCIALES PRIMAVERA ZONA 11</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES PRIMAVERA ZONA 11 XT ST">RESIDENCIALES PRIMAVERA ZONA 11 XT ST</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES ROBLE I">RESIDENCIALES ROBLE I</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES SAN JOSE PINULA 2">RESIDENCIALES SAN JOSE PINULA 2</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES SANTA AMELIA EEGSA_XT_EGG">RESIDENCIALES SANTA AMELIA EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="RESIDENCIALES V">RESIDENCIALES V</option>';
+            SITIO_options_str  += '<option value="RINCONES DEL ZAPOTE EEGSA_XT_EGG">RINCONES DEL ZAPOTE EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="RIO BLANCO">RIO BLANCO</option>';
+            SITIO_options_str  += '<option value="RIO BLANCO SACAPULAS">RIO BLANCO SACAPULAS</option>';
+            SITIO_options_str  += '<option value="RIO BRAVO PUEBLO XT TC">RIO BRAVO PUEBLO XT TC</option>';
+            SITIO_options_str  += '<option value="RIO MIRAMUNDO">RIO MIRAMUNDO</option>';
+            SITIO_options_str  += '<option value="RIO SAN JUAN">RIO SAN JUAN</option>';
+            SITIO_options_str  += '<option value="RIO SELEGUA">RIO SELEGUA</option>';
+            SITIO_options_str  += '<option value="RIVERA RIO RTA TLGUA">RIVERA RIO RTA TLGUA</option>';
+            SITIO_options_str  += '<option value="SABALIQUE">SABALIQUE</option>';
+            SITIO_options_str  += '<option value="SABANETA EL CAMPO">SABANETA EL CAMPO</option>';
+            SITIO_options_str  += '<option value="SACOJ">SACOJ</option>';
+            SITIO_options_str  += '<option value="SAJBICHAL TC">SAJBICHAL TC</option>';
+            SITIO_options_str  += '<option value="SAJCHILAJ">SAJCHILAJ</option>';
+            SITIO_options_str  += '<option value="SAKERTI">SAKERTI</option>';
+            SITIO_options_str  += '<option value="SALAMA II">SALAMA II</option>';
+            SITIO_options_str  += '<option value="SALAMÁ-SAN MIGUEL CHICAJ_XT_SB">SALAMÁ-SAN MIGUEL CHICAJ_XT_SB</option>';
+            SITIO_options_str  += '<option value="SALCAJA">SALCAJA</option>';
+            SITIO_options_str  += '<option value="SALCAJA 2 SBA">SALCAJA 2 SBA</option>';
+            SITIO_options_str  += '<option value="SALIDA A SALCAJA TC">SALIDA A SALCAJA TC</option>';
+            SITIO_options_str  += '<option value="SALQUIL">SALQUIL</option>';
+            SITIO_options_str  += '<option value="SAMPAQUISOY">SAMPAQUISOY</option>';
+            SITIO_options_str  += '<option value="SAN AGUSTÍN ACASAGUASTLÁN PUEBLO_XT_S">SAN AGUSTÍN ACASAGUASTLÁN PUEBLO_XT_S</option>';
+            SITIO_options_str  += '<option value="SAN ANDRES HUISTA">SAN ANDRES HUISTA</option>';
+            SITIO_options_str  += '<option value="SAN ANDRES VILLASECA CARRETERA_XT_TR">SAN ANDRES VILLASECA CARRETERA_XT_TR</option>';
+            SITIO_options_str  += '<option value="SAN ANDRÉS ITZAPA 2_X">SAN ANDRÉS ITZAPA 2_X</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO HUISTA">SAN ANTONIO HUISTA</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO LA PAZ (PRO246)_XT">SAN ANTONIO LA PAZ (PRO246)_XT</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO PAJOC_XT">SAN ANTONIO PAJOC_XT</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO PALOPO 2">SAN ANTONIO PALOPO 2</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO SOCORRO">SAN ANTONIO SOCORRO</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO SUCHI II">SAN ANTONIO SUCHI II</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO TACANA">SAN ANTONIO TACANA</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO TC">SAN ANTONIO TC</option>';
+            SITIO_options_str  += '<option value="SAN ANTONIO XELA">SAN ANTONIO XELA</option>';
+            SITIO_options_str  += '<option value="SAN BARTOLO JOCOTENANGO">SAN BARTOLO JOCOTENANGO</option>';
+            SITIO_options_str  += '<option value="SAN BENITO IV">SAN BENITO IV</option>';
+            SITIO_options_str  += '<option value="SAN CRISTOBAL CUCHO">SAN CRISTOBAL CUCHO</option>';
+            SITIO_options_str  += '<option value="SAN CRISTOBAL EL ALTO C">SAN CRISTOBAL EL ALTO C</option>';
+            SITIO_options_str  += '<option value="SAN FELIPE IXCAN TC">SAN FELIPE IXCAN TC</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO BAJA VERAPAZ">SAN FRANCISCO BAJA VERAPAZ</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO EL ALTO (TOT145)_XT">SAN FRANCISCO EL ALTO (TOT145)_XT</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO LA DEMOCRACIA">SAN FRANCISCO LA DEMOCRACIA</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO LA UNION">SAN FRANCISCO LA UNION</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO PETÉN_XT_SB">SAN FRANCISCO PETÉN_XT_SB</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO ZAPOTITLAN">SAN FRANCISCO ZAPOTITLAN</option>';
+            SITIO_options_str  += '<option value="SAN FRANCISCO ZAPOTITLÁ">SAN FRANCISCO ZAPOTITLÁ</option>';
+            SITIO_options_str  += '<option value="SAN GABRIEL SAN LORENZO">SAN GABRIEL SAN LORENZO</option>';
+            SITIO_options_str  += '<option value="SAN GASPAR IXCHIL">SAN GASPAR IXCHIL</option>';
+            SITIO_options_str  += '<option value="SAN ISIDRO 20-21_XT">SAN ISIDRO 20-21_XT</option>';
+            SITIO_options_str  += '<option value="SAN JACINTO XT_2026">SAN JACINTO XT_2026</option>';
+            SITIO_options_str  += '<option value="SAN JORGE LA LAGUNA">SAN JORGE LA LAGUNA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE ACATEMPA">SAN JOSE ACATEMPA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE BUENA VISTA JUTIAPA">SAN JOSE BUENA VISTA JUTIAPA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE CHACAYA">SAN JOSE CHACAYA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE GRANADOS TC">SAN JOSE GRANADOS TC</option>';
+            SITIO_options_str  += '<option value="SAN JOSE IXTAL_2026">SAN JOSE IXTAL_2026</option>';
+            SITIO_options_str  += '<option value="SAN JOSE LA COLONIA_XT_SBA">SAN JOSE LA COLONIA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE LAS CANOAS">SAN JOSE LAS CANOAS</option>';
+            SITIO_options_str  += '<option value="SAN JOSE MOGOLLON">SAN JOSE MOGOLLON</option>';
+            SITIO_options_str  += '<option value="SAN JOSE NACAHUIL_XT_SBA">SAN JOSE NACAHUIL_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SAN JOSE PETEN ESTADIO">SAN JOSE PETEN ESTADIO</option>';
+            SITIO_options_str  += '<option value="SAN JOSE POAQUIL">SAN JOSE POAQUIL</option>';
+            SITIO_options_str  += '<option value="SAN JUAN BOSCO">SAN JUAN BOSCO</option>';
+            SITIO_options_str  += '<option value="SAN JUAN COMALAPA II">SAN JUAN COMALAPA II</option>';
+            SITIO_options_str  += '<option value="SAN JUAN COMALAPA IV">SAN JUAN COMALAPA IV</option>';
+            SITIO_options_str  += '<option value="SAN JUAN EL PARAISO">SAN JUAN EL PARAISO</option>';
+            SITIO_options_str  += '<option value="SAN JUAN MIAN">SAN JUAN MIAN</option>';
+            SITIO_options_str  += '<option value="SAN LORENZO HUEHUETENANGO">SAN LORENZO HUEHUETENANGO</option>';
+            SITIO_options_str  += '<option value="SAN LUCAS TOLIMÁN RN14_XT_CTC">SAN LUCAS TOLIMÁN RN14_XT_CTC</option>';
+            SITIO_options_str  += '<option value="SAN MARCOS (T1-347) SBA">SAN MARCOS (T1-347) SBA</option>';
+            SITIO_options_str  += '<option value="SAN MARCOS HUISTA">SAN MARCOS HUISTA</option>';
+            SITIO_options_str  += '<option value="SAN MARTIN BUJILLA">SAN MARTIN BUJILLA</option>';
+            SITIO_options_str  += '<option value="SAN MARTÍN CHILEVERDE_XT_SB">SAN MARTÍN CHILEVERDE_XT_SB</option>';
+            SITIO_options_str  += '<option value="SAN MARTÍN ZAPOTITLÁN_XT_">SAN MARTÍN ZAPOTITLÁN_XT_</option>';
+            SITIO_options_str  += '<option value="SAN MAURICIO">SAN MAURICIO</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL BAJO TC">SAN MIGUEL BAJO TC</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL CHICAJ PUEBLO C">SAN MIGUEL CHICAJ PUEBLO C</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL DE LOS ALTOS">SAN MIGUEL DE LOS ALTOS</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL DUEÑAS RN1">SAN MIGUEL DUEÑAS RN1</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL EL TEJAR_XT">SAN MIGUEL EL TEJAR_XT</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL IXTAHUACAN">SAN MIGUEL IXTAHUACAN</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL IXTAHUACAN EXP">SAN MIGUEL IXTAHUACAN EXP</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL PETAPA">SAN MIGUEL PETAPA</option>';
+            SITIO_options_str  += '<option value="SAN MIGUEL PETEN">SAN MIGUEL PETEN</option>';
+            SITIO_options_str  += '<option value="SAN MIGUELITO CALAHUACHE TC">SAN MIGUELITO CALAHUACHE TC</option>';
+            SITIO_options_str  += '<option value="SAN PABLO TEMPORAL 2">SAN PABLO TEMPORAL 2</option>';
+            SITIO_options_str  += '<option value="SAN PABLO XUCANEB">SAN PABLO XUCANEB</option>';
+            SITIO_options_str  += '<option value="SAN PEDRO CARCHA III POSTE I">SAN PEDRO CARCHA III POSTE I</option>';
+            SITIO_options_str  += '<option value="SAN PEDRO LA LAGUNA">SAN PEDRO LA LAGUNA</option>';
+            SITIO_options_str  += '<option value="SAN PEDRO NECTA">SAN PEDRO NECTA</option>';
+            SITIO_options_str  += '<option value="SAN PEDRO SACATEPEQUEZ">SAN PEDRO SACATEPEQUEZ</option>';
+            SITIO_options_str  += '<option value="SAN RAFAEL BUJIYA">SAN RAFAEL BUJIYA</option>';
+            SITIO_options_str  += '<option value="SAN RAFAEL LA LAGUNA EEGSA_XT_EGG">SAN RAFAEL LA LAGUNA EEGSA_XT_EGG</option>';
+            SITIO_options_str  += '<option value="SAN RAFAEL LAS FLORES SBA">SAN RAFAEL LAS FLORES SBA</option>';
+            SITIO_options_str  += '<option value="SAN RAFAEL SUMATAN TC">SAN RAFAEL SUMATAN TC</option>';
+            SITIO_options_str  += '<option value="SAN SEBASTIAN COATÁN_XT_SB">SAN SEBASTIAN COATÁN_XT_SB</option>';
+            SITIO_options_str  += '<option value="SAN SEBASTIAN REU">SAN SEBASTIAN REU</option>';
+            SITIO_options_str  += '<option value="SAN VICENTE BUENABAJ">SAN VICENTE BUENABAJ</option>';
+            SITIO_options_str  += '<option value="SANARATE 2 (PRO162)_XT">SANARATE 2 (PRO162)_XT</option>';
+            SITIO_options_str  += '<option value="SANATORIO EL PILAR">SANATORIO EL PILAR</option>';
+            SITIO_options_str  += '<option value="SANTA ANA MIXTAN">SANTA ANA MIXTAN</option>';
+            SITIO_options_str  += '<option value="SANTA ANA PETEN">SANTA ANA PETEN</option>';
+            SITIO_options_str  += '<option value="SANTA APOLONIA CHUICUBAL">SANTA APOLONIA CHUICUBAL</option>';
+            SITIO_options_str  += '<option value="SANTA AVELINA">SANTA AVELINA</option>';
+            SITIO_options_str  += '<option value="SANTA BARBARA SUCHI">SANTA BARBARA SUCHI</option>';
+            SITIO_options_str  += '<option value="SANTA BÁRBARA BAJA VERAPAZ_X">SANTA BÁRBARA BAJA VERAPAZ_X</option>';
+            SITIO_options_str  += '<option value="SANTA CATALINA LA TINTA 2">SANTA CATALINA LA TINTA 2</option>';
+            SITIO_options_str  += '<option value="SANTA CATALINA LA TINTA_XT">SANTA CATALINA LA TINTA_XT</option>';
+            SITIO_options_str  += '<option value="SANTA CATARINA CENTRO EEGSA_XT">SANTA CATARINA CENTRO EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="SANTA CECILIA ESCUINTLA">SANTA CECILIA ESCUINTLA</option>';
+            SITIO_options_str  += '<option value="SANTA CLARA LA LAGUNA_XT_SBA">SANTA CLARA LA LAGUNA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SANTA CRUZ MULUA">SANTA CRUZ MULUA</option>';
+            SITIO_options_str  += '<option value="SANTA CRUZ XT">SANTA CRUZ XT</option>';
+            SITIO_options_str  += '<option value="SANTA ELENA PETEN">SANTA ELENA PETEN</option>';
+            SITIO_options_str  += '<option value="SANTA EULALIA">SANTA EULALIA</option>';
+            SITIO_options_str  += '<option value="SANTA FE">SANTA FE</option>';
+            SITIO_options_str  += '<option value="SANTA FE_XT">SANTA FE_XT</option>';
+            SITIO_options_str  += '<option value="SANTA INES CHIVAC II TC">SANTA INES CHIVAC II TC</option>';
+            SITIO_options_str  += '<option value="SANTA LUCIA 5 XT TR">SANTA LUCIA 5 XT TR</option>';
+            SITIO_options_str  += '<option value="SANTA LUCIA 5_XT_TR">SANTA LUCIA 5_XT_TR</option>';
+            SITIO_options_str  += '<option value="SANTA LUCIA COTZ. II TC">SANTA LUCIA COTZ. II TC</option>';
+            SITIO_options_str  += '<option value="SANTA LUCIA LOS OCOTES">SANTA LUCIA LOS OCOTES</option>';
+            SITIO_options_str  += '<option value="SANTA MARIA DE JESUS SAC">SANTA MARIA DE JESUS SAC</option>';
+            SITIO_options_str  += '<option value="SANTA MARIA IXHUATAN">SANTA MARIA IXHUATAN</option>';
+            SITIO_options_str  += '<option value="SANTA ROSALIA BAJOS LIRIOS REMOTO LOS CEDROS">SANTA ROSALIA BAJOS LIRIOS REMOTO LOS CEDROS</option>';
+            SITIO_options_str  += '<option value="SANTA ROSALIA LA LAGUNA 1 (SANTA ROSALIA 1)_XT">SANTA ROSALIA LA LAGUNA 1 (SANTA ROSALIA 1)_XT</option>';
+            SITIO_options_str  += '<option value="SANTA ROSALIA LOS CIPRESES">SANTA ROSALIA LOS CIPRESES</option>';
+            SITIO_options_str  += '<option value="SANTA ROSITA PETEN">SANTA ROSITA PETEN</option>';
+            SITIO_options_str  += '<option value="SANTA ROSITA_XT_SBA">SANTA ROSITA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SANTIAGO ATITLAN SBA">SANTIAGO ATITLAN SBA</option>';
+            SITIO_options_str  += '<option value="SANTIAGO ATITLÁN_XT_SB">SANTIAGO ATITLÁN_XT_SB</option>';
+            SITIO_options_str  += '<option value="SANTIAGO IXCAN">SANTIAGO IXCAN</option>';
+            SITIO_options_str  += '<option value="SANTIAGO SACATEPEQUEZ">SANTIAGO SACATEPEQUEZ</option>';
+            SITIO_options_str  += '<option value="SANTIAGO SACATEPEQUEZ 2 (SAC120)_XT_SBA">SANTIAGO SACATEPEQUEZ 2 (SAC120)_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SANTIAGO_XT_SBA">SANTIAGO_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SANTO TOMAS DE CASTILLA">SANTO TOMAS DE CASTILLA</option>';
+            SITIO_options_str  += '<option value="SANTO TOMAS LA UNION">SANTO TOMAS LA UNION</option>';
+            SITIO_options_str  += '<option value="SANTO TOMAS LA UNION II">SANTO TOMAS LA UNION II</option>';
+            SITIO_options_str  += '<option value="SANTO TOMAS LA UNION TR">SANTO TOMAS LA UNION TR</option>';
+            SITIO_options_str  += '<option value="SASHAMACH C">SASHAMACH C</option>';
+            SITIO_options_str  += '<option value="SATIZ COBAN _XT_TR">SATIZ COBAN _XT_TR</option>';
+            SITIO_options_str  += '<option value="SAUCES">SAUCES</option>';
+            SITIO_options_str  += '<option value="SEGUNDO CANTON ALOTENANGO TC">SEGUNDO CANTON ALOTENANGO TC</option>';
+            SITIO_options_str  += '<option value="SENAHU">SENAHU</option>';
+            SITIO_options_str  += '<option value="SENAHU 2">SENAHU 2</option>';
+            SITIO_options_str  += '<option value="SEPAMAC">SEPAMAC</option>';
+            SITIO_options_str  += '<option value="SEPAMAC TC">SEPAMAC TC</option>';
+            SITIO_options_str  += '<option value="SHUSHO ARRIBA CHIQUIMULA TC">SHUSHO ARRIBA CHIQUIMULA TC</option>';
+            SITIO_options_str  += '<option value="SIBANÁ_XT_SB">SIBANÁ_XT_SB</option>';
+            SITIO_options_str  += '<option value="SIBINAL">SIBINAL</option>';
+            SITIO_options_str  += '<option value="SIBINAL II">SIBINAL II</option>';
+            SITIO_options_str  += '<option value="SIETE PINOS TC">SIETE PINOS TC</option>';
+            SITIO_options_str  += '<option value="SINTANA">SINTANA</option>';
+            SITIO_options_str  += '<option value="SIPACATE">SIPACATE</option>';
+            SITIO_options_str  += '<option value="SIPACATE-GOMERA_XT_SBA">SIPACATE-GOMERA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="SIT_ZONA  10_XT_EG">SIT_ZONA  10_XT_EG</option>';
+            SITIO_options_str  += '<option value="SOCHE TC">SOCHE TC</option>';
+            SITIO_options_str  += '<option value="SOLOLA CENTRAL">SOLOLA CENTRAL</option>';
+            SITIO_options_str  += '<option value="SOLOLA II">SOLOLA II</option>';
+            SITIO_options_str  += '<option value="SONORA">SONORA</option>';
+            SITIO_options_str  += '<option value="SONORA (GUA064)">SONORA (GUA064)</option>';
+            SITIO_options_str  += '<option value="STA ANITA BOCA DEL MONTE">STA ANITA BOCA DEL MONTE</option>';
+            SITIO_options_str  += '<option value="STA CATARINA IXTAHUACAN">STA CATARINA IXTAHUACAN</option>';
+            SITIO_options_str  += '<option value="SUCHITÁN_XT_SB">SUCHITÁN_XT_SB</option>';
+            SITIO_options_str  += '<option value="SUMPANGO CARRETERA_XT">SUMPANGO CARRETERA_XT</option>';
+            SITIO_options_str  += '<option value="SUMPANGO PUEBLO XT SBA">SUMPANGO PUEBLO XT SBA</option>';
+            SITIO_options_str  += '<option value="SUMPANGO XT">SUMPANGO XT</option>';
+            SITIO_options_str  += '<option value="SUPERBIA">SUPERBIA</option>';
+            SITIO_options_str  += '<option value="Sacsuy(5076)">Sacsuy(5076)</option>';
+            SITIO_options_str  += '<option value="Salida a Monjas SBA">Salida a Monjas SBA</option>';
+            SITIO_options_str  += '<option value="Salitre Huehuetenango">Salitre Huehuetenango</option>';
+            SITIO_options_str  += '<option value="San Francisco Zapotitlan IV TR">San Francisco Zapotitlan IV TR</option>';
+            SITIO_options_str  += '<option value="San Jose Chavacal">San Jose Chavacal</option>';
+            SITIO_options_str  += '<option value="San Jose Ixtal">San Jose Ixtal</option>';
+            SITIO_options_str  += '<option value="San Jose Las Brisas">San Jose Las Brisas</option>';
+            SITIO_options_str  += '<option value="San Juan Comalapa V">San Juan Comalapa V</option>';
+            SITIO_options_str  += '<option value="San Martín Jilotepequ">San Martín Jilotepequ</option>';
+            SITIO_options_str  += '<option value="San Mateo II Esquipulas SBA">San Mateo II Esquipulas SBA</option>';
+            SITIO_options_str  += '<option value="San Miguel Pajapa">San Miguel Pajapa</option>';
+            SITIO_options_str  += '<option value="San Ramon Suchitepéque">San Ramon Suchitepéque</option>';
+            SITIO_options_str  += '<option value="San_Jose_Belice_TC(4142)">San_Jose_Belice_TC(4142)</option>';
+            SITIO_options_str  += '<option value="San_Juan_Talpetate">San_Juan_Talpetate</option>';
+            SITIO_options_str  += '<option value="Santa Ana Momostenango">Santa Ana Momostenango</option>';
+            SITIO_options_str  += '<option value="Santo Tomas de Castilla�">Santo Tomas de Castilla�</option>';
+            SITIO_options_str  += '<option value="Saquitacaj TC">Saquitacaj TC</option>';
+            SITIO_options_str  += '<option value="Septima  Avenida Zona">Septima  Avenida Zona</option>';
+            SITIO_options_str  += '<option value="Sepur_Limite(1949)">Sepur_Limite(1949)</option>';
+            SITIO_options_str  += '<option value="Serchil">Serchil</option>';
+            SITIO_options_str  += '<option value="Sochel">Sochel</option>';
+            SITIO_options_str  += '<option value="Suraves">Suraves</option>';
+            SITIO_options_str  += '<option value="TABACAL 1 EEGSA (ENRIQUETA)_XT_EGG">TABACAL 1 EEGSA (ENRIQUETA)_XT_EGG</option>';
+            SITIO_options_str  += '<option value="TABACAL CIENAGUITA">TABACAL CIENAGUITA</option>';
+            SITIO_options_str  += '<option value="TACATON POSTE">TACATON POSTE</option>';
+            SITIO_options_str  += '<option value="TACTIC CENTRO TC">TACTIC CENTRO TC</option>';
+            SITIO_options_str  += '<option value="TAHUEXCO">TAHUEXCO</option>';
+            SITIO_options_str  += '<option value="TAJCHUM ATITAN">TAJCHUM ATITAN</option>';
+            SITIO_options_str  += '<option value="TAJUMULCO">TAJUMULCO</option>';
+            SITIO_options_str  += '<option value="TALMICHE">TALMICHE</option>';
+            SITIO_options_str  += '<option value="TALTIMICHE_XT_TR">TALTIMICHE_XT_TR</option>';
+            SITIO_options_str  += '<option value="TECNO PARK ESCUINTLA">TECNO PARK ESCUINTLA</option>';
+            SITIO_options_str  += '<option value="TECPAN 2_XT">TECPAN 2_XT</option>';
+            SITIO_options_str  += '<option value="TECPAN II 2026">TECPAN II 2026</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN">TECUN UMAN</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN II XT TC">TECUN UMAN II XT TC</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN II XT TC_TRASLADO (4083)">TECUN UMAN II XT TC_TRASLADO (4083)</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN III XT TR">TECUN UMAN III XT TR</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN POSTE I">TECUN UMAN POSTE I</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN POSTE II">TECUN UMAN POSTE II</option>';
+            SITIO_options_str  += '<option value="TECUN UMAN POSTE III_Desmontaje">TECUN UMAN POSTE III_Desmontaje</option>';
+            SITIO_options_str  += '<option value="TEJUTLA EXP">TEJUTLA EXP</option>';
+            SITIO_options_str  += '<option value="TEMPORAL ANTIGUA 2026">TEMPORAL ANTIGUA 2026</option>';
+            SITIO_options_str  += '<option value="TEMPORAL SAN PABLO LA LAGUNA">TEMPORAL SAN PABLO LA LAGUNA</option>';
+            SITIO_options_str  += '<option value="TEMPORAL SEMANA SANTA ANTIGUA GUATEMALA 2025">TEMPORAL SEMANA SANTA ANTIGUA GUATEMALA 2025</option>';
+            SITIO_options_str  += '<option value="TENEDORES KM 270">TENEDORES KM 270</option>';
+            SITIO_options_str  += '<option value="TERMINAL DIDISA EGG">TERMINAL DIDISA EGG</option>';
+            SITIO_options_str  += '<option value="TETRACENTER">TETRACENTER</option>';
+            SITIO_options_str  += '<option value="TEZENEZ">TEZENEZ</option>';
+            SITIO_options_str  += '<option value="TIERRA BLANCA PETEN">TIERRA BLANCA PETEN</option>';
+            SITIO_options_str  += '<option value="TIKAL FUTURA">TIKAL FUTURA</option>';
+            SITIO_options_str  += '<option value="TIKAL FUTURA INDOOR">TIKAL FUTURA INDOOR</option>';
+            SITIO_options_str  += '<option value="TIVOLI CAC OUTDOOR REMOTO">TIVOLI CAC OUTDOOR REMOTO</option>';
+            SITIO_options_str  += '<option value="TODOS SANTOS CUCHUMATÁN_X">TODOS SANTOS CUCHUMATÁN_X</option>';
+            SITIO_options_str  += '<option value="TOJCHOJ">TOJCHOJ</option>';
+            SITIO_options_str  += '<option value="TOMQUIN INGENIO PALO GORDO TC">TOMQUIN INGENIO PALO GORDO TC</option>';
+            SITIO_options_str  += '<option value="TONQUIN">TONQUIN</option>';
+            SITIO_options_str  += '<option value="TOTONICAPAN CUIDAD TC">TOTONICAPAN CUIDAD TC</option>';
+            SITIO_options_str  += '<option value="TOTONICAPAN_XT">TOTONICAPAN_XT</option>';
+            SITIO_options_str  += '<option value="TRES CRUCES TUIQUIL">TRES CRUCES TUIQUIL</option>';
+            SITIO_options_str  += '<option value="TRIUNFO">TRIUNFO</option>';
+            SITIO_options_str  += '<option value="TROCHA 13">TROCHA 13</option>';
+            SITIO_options_str  += '<option value="TROCHA DEL TIGRE TC">TROCHA DEL TIGRE TC</option>';
+            SITIO_options_str  += '<option value="TROCHAS LOS LAURELES">TROCHAS LOS LAURELES</option>';
+            SITIO_options_str  += '<option value="TRÉBOL_X">TRÉBOL_X</option>';
+            SITIO_options_str  += '<option value="TUCANJA">TUCANJA</option>';
+            SITIO_options_str  += '<option value="TUCURU II">TUCURU II</option>';
+            SITIO_options_str  += '<option value="TUCURÚ_XT_SB">TUCURÚ_XT_SB</option>';
+            SITIO_options_str  += '<option value="TUIJOJ TC">TUIJOJ TC</option>';
+            SITIO_options_str  += '<option value="TZAMPETEY SBA">TZAMPETEY SBA</option>';
+            SITIO_options_str  += '<option value="TZUNUNA TC">TZUNUNA TC</option>';
+            SITIO_options_str  += '<option value="Tac Tic 2">Tac Tic 2</option>';
+            SITIO_options_str  += '<option value="Temporal CC Los Celajes Quiche">Temporal CC Los Celajes Quiche</option>';
+            SITIO_options_str  += '<option value="Temporal Feria Quiche">Temporal Feria Quiche</option>';
+            SITIO_options_str  += '<option value="Tonquin">Tonquin</option>';
+            SITIO_options_str  += '<option value="Trocha 4 Calle Palo Blanco">Trocha 4 Calle Palo Blanco</option>';
+            SITIO_options_str  += '<option value="Tzalbal">Tzalbal</option>';
+            SITIO_options_str  += '<option value="Tzisbaj">Tzisbaj</option>';
+            SITIO_options_str  += '<option value="UMG HUEHUE">UMG HUEHUE</option>';
+            SITIO_options_str  += '<option value="UNION CANTINIL 2">UNION CANTINIL 2</option>';
+            SITIO_options_str  += '<option value="USAC">USAC</option>';
+            SITIO_options_str  += '<option value="USAC 2_XT_SBA">USAC 2_XT_SBA</option>';
+            SITIO_options_str  += '<option value="USPANTÁN XT REMOTO TEMPORA">USPANTÁN XT REMOTO TEMPORA</option>';
+            SITIO_options_str  += '<option value="VALENTON">VALENTON</option>';
+            SITIO_options_str  += '<option value="VALLA ADHARIA">VALLA ADHARIA</option>';
+            SITIO_options_str  += '<option value="VALLE DE LAS FLORES PALIN">VALLE DE LAS FLORES PALIN</option>';
+            SITIO_options_str  += '<option value="VALLES DE SONORA VILLA NUEVA">VALLES DE SONORA VILLA NUEVA</option>';
+            SITIO_options_str  += '<option value="VERSALLES SECTOR LA PERLA TC">VERSALLES SECTOR LA PERLA TC</option>';
+            SITIO_options_str  += '<option value="VILLA DE GUADALUPE CAC OUTDOOR REMOTO">VILLA DE GUADALUPE CAC OUTDOOR REMOTO</option>';
+            SITIO_options_str  += '<option value="VILLA DE LAS MERCEDES EEGSA_XT">VILLA DE LAS MERCEDES EEGSA_XT</option>';
+            SITIO_options_str  += '<option value="VILLA DE MIXCO">VILLA DE MIXCO</option>';
+            SITIO_options_str  += '<option value="VILLA ESMERALDA_XT_SBA">VILLA ESMERALDA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="VILLA FLORES 2 TC">VILLA FLORES 2 TC</option>';
+            SITIO_options_str  += '<option value="VILLA HERMOSA BOCA DEL MONTE">VILLA HERMOSA BOCA DEL MONTE</option>';
+            SITIO_options_str  += '<option value="VILLA HERMOSA III">VILLA HERMOSA III</option>';
+            SITIO_options_str  += '<option value="VILLA LADINO COLONIA LANDIVAR">VILLA LADINO COLONIA LANDIVAR</option>';
+            SITIO_options_str  += '<option value="VILLA OFELIA">VILLA OFELIA</option>';
+            SITIO_options_str  += '<option value="VILLA ROMANA">VILLA ROMANA</option>';
+            SITIO_options_str  += '<option value="VILLAS DEL PACIFICO">VILLAS DEL PACIFICO</option>';
+            SITIO_options_str  += '<option value="VILLAS DEL RIO AMATITLAN">VILLAS DEL RIO AMATITLAN</option>';
+            SITIO_options_str  += '<option value="VILLAVERDE">VILLAVERDE</option>';
+            SITIO_options_str  += '<option value="VISTA HERMOSA IV">VISTA HERMOSA IV</option>';
+            SITIO_options_str  += '<option value="VISTA HERMOSA IV CERRO">VISTA HERMOSA IV CERRO</option>';
+            SITIO_options_str  += '<option value="VISTA REAL_XT">VISTA REAL_XT</option>';
+            SITIO_options_str  += '<option value="VUELTA EL CORO CHIANTLA TC">VUELTA EL CORO CHIANTLA TC</option>';
+            SITIO_options_str  += '<option value="Valle Nuevo El Toro">Valle Nuevo El Toro</option>';
+            SITIO_options_str  += '<option value="Valle_Candelaria">Valle_Candelaria</option>';
+            SITIO_options_str  += '<option value="XAB EL RECREO">XAB EL RECREO</option>';
+            SITIO_options_str  += '<option value="XABILAGUACH">XABILAGUACH</option>';
+            SITIO_options_str  += '<option value="XEBAQUIT">XEBAQUIT</option>';
+            SITIO_options_str  += '<option value="XECARACOJ">XECARACOJ</option>';
+            SITIO_options_str  += '<option value="XECARACOJ_XT">XECARACOJ_XT</option>';
+            SITIO_options_str  += '<option value="XELA GARDEN II">XELA GARDEN II</option>';
+            SITIO_options_str  += '<option value="XELA GARDENS TC">XELA GARDENS TC</option>';
+            SITIO_options_str  += '<option value="XELA SUR OCC_XT_TC">XELA SUR OCC_XT_TC</option>';
+            SITIO_options_str  += '<option value="XESIGUAN TC">XESIGUAN TC</option>';
+            SITIO_options_str  += '<option value="Xatinab">Xatinab</option>';
+            SITIO_options_str  += '<option value="YACXAB SOLOMA">YACXAB SOLOMA</option>';
+            SITIO_options_str  += '<option value="YALMACHAC">YALMACHAC</option>';
+            SITIO_options_str  += '<option value="YEPOCAPA II POSTE">YEPOCAPA II POSTE</option>';
+            SITIO_options_str  += '<option value="YOXAJA">YOXAJA</option>';
+            SITIO_options_str  += '<option value="YUPILTEPEQUE">YUPILTEPEQUE</option>';
+            SITIO_options_str  += '<option value="YUPILTEPEQUE_XT -2026">YUPILTEPEQUE_XT -2026</option>';
+            SITIO_options_str  += '<option value="YUXACTE">YUXACTE</option>';
+            SITIO_options_str  += '<option value="ZACAPA III">ZACAPA III</option>';
+            SITIO_options_str  += '<option value="ZACAPA SUR_XT_TC">ZACAPA SUR_XT_TC</option>';
+            SITIO_options_str  += '<option value="ZAPOTITLAN">ZAPOTITLAN</option>';
+            SITIO_options_str  += '<option value="ZARAGOZA">ZARAGOZA</option>';
+            SITIO_options_str  += '<option value="ZONA 1 XELA C">ZONA 1 XELA C</option>';
+            SITIO_options_str  += '<option value="ZONA 11 XELA_XT">ZONA 11 XELA_XT</option>';
+            SITIO_options_str  += '<option value="ZONA 3 CHIMALTENANGO">ZONA 3 CHIMALTENANGO</option>';
+            SITIO_options_str  += '<option value="ZONA 3 SANTA ELENA BARILLAS XT_TR">ZONA 3 SANTA ELENA BARILLAS XT_TR</option>';
+            SITIO_options_str  += '<option value="ZONA 5 SAN BENITO_XT_TR">ZONA 5 SAN BENITO_XT_TR</option>';
+            SITIO_options_str  += '<option value="ZONA 6 XELA_XT_SBA">ZONA 6 XELA_XT_SBA</option>';
+            SITIO_options_str  += '<option value="ZONA VIVA 2_EGG">ZONA VIVA 2_EGG</option>';
+            SITIO_options_str  += '<option value="Zona 5 Quiche">Zona 5 Quiche</option>';
+            SITIO_options_str  += '<option value="valla Reformita I">valla Reformita I</option>';
+            SITIO_options_str  += '<option value="�ZUNIL�XT�ST">�ZUNIL�XT�ST</option>';
+            sel_SITIO.innerHTML = SITIO_options_str;
+            div_SITIO.appendChild(sel_SITIO);
+            var lab_SITIO = document.createElement('div');
+            lab_SITIO.innerHTML = 'SITIO';
+            lab_SITIO.className = 'filterlabel';
+            div_SITIO.appendChild(lab_SITIO);
+            var reset_SITIO = document.createElement('div');
+            reset_SITIO.innerHTML = 'clear filter';
+            reset_SITIO.className = 'filterlabel';
+            reset_SITIO.onclick = function() {
+                var options = document.getElementById("sel_SITIO").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_SITIO.appendChild(reset_SITIO);
+        </script>        
+    </body>
+</html>
